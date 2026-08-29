@@ -1,5 +1,5 @@
 # Lodera backend — Python 3.12 + FastAPI
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # - PYTHONDONTWRITEBYTECODE: no .pyc files in the image
 # - PYTHONUNBUFFERED: stream logs straight to the container output
