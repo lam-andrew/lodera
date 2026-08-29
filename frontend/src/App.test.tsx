@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import * as client from "./api/client";
+import { APP_NAME } from "./config/branding";
 
 describe("App", () => {
   beforeEach(() => {
@@ -11,7 +12,7 @@ describe("App", () => {
   it("renders the product heading", () => {
     vi.spyOn(client, "getHealth").mockReturnValue(new Promise(() => {}));
     render(<App />);
-    expect(screen.getByRole("heading", { level: 1, name: /lodera/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: APP_NAME })).toBeInTheDocument();
   });
 
   it("shows backend health once the /health call resolves", async () => {
