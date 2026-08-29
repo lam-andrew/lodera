@@ -29,3 +29,4 @@ capture an architecturally significant decision, its context, and its consequenc
 | [0006](0006-portfolio-ingestion-manual-csv.md) | Portfolio ingestion via manual entry + CSV for MVP | Accepted |
 | [0007](0007-quality-gates-and-security-scanning.md) | CI quality gates and security scanning | Accepted |
 | [0008](0008-defer-continuous-deployment.md) | Defer Continuous Deployment until a host is selected | Accepted |
+| [0009](0009-ui-styling-tailwind-shadcn-tremor.md) | UI styling: Tailwind + shadcn/ui + Tremor | Accepted |
