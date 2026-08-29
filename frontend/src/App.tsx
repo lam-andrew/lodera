@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
+import { APP_NAME, APP_TAGLINE } from "./config/branding";
 
 type Status =
   | { kind: "loading" }
@@ -42,10 +43,8 @@ export default function App() {
         padding: "0 1rem",
       }}
     >
-      <h1>Lodera</h1>
-      <p style={{ color: "#555" }}>
-        Portfolio risk intelligence — measure, contextualize, and explain risk.
-      </p>
+      <h1>{APP_NAME}</h1>
+      <p style={{ color: "#555" }}>{APP_TAGLINE}</p>
 
       <section aria-label="Backend status" style={{ marginTop: "2rem" }}>
         <h2
