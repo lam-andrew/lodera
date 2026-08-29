@@ -1,5 +1,5 @@
 # Lodera frontend — React + TypeScript (Vite dev server)
-FROM node:20-slim
+FROM node:26-slim
 
 WORKDIR /app
 
