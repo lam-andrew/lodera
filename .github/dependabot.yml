@@ -1,5 +1,10 @@
-# Dependabot keeps dependencies patched and surfaces vulnerable versions as PRs.
-# Covers both application ecosystems, both Dockerfiles, and the GitHub Actions we pin.
+# Dependabot keeps dependencies patched and surfaces vulnerable versions.
+#
+# To avoid a flood of one-PR-per-bump, safe minor/patch updates are GROUPED into a single
+# PR per ecosystem, while major updates still arrive as individual PRs so each breaking
+# change is reviewed on its own. Major runtime bumps (Python, Node) are ignored because the
+# runtime versions are pinned deliberately (see docs/adr/0001-backend-frontend-stack.md);
+# upgrade those as a conscious decision, not an auto-bump.
 version: 2
 updates:
   - package-ecosystem: pip
@@ -8,6 +13,9 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     labels: ["dependencies", "backend"]
+    groups:
+      backend-minor-patch:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: npm
     directory: /frontend
@@ -15,21 +23,35 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     labels: ["dependencies", "frontend"]
+    groups:
+      frontend-minor-patch:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: docker
     directory: /backend
     schedule:
       interval: weekly
     labels: ["dependencies", "docker"]
+    ignore:
+      # Python runtime is pinned to 3.12 by ADR 0001; upgrade deliberately.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /frontend
     schedule:
       interval: weekly
     labels: ["dependencies", "docker"]
+    ignore:
+      # Node runtime is pinned to 20 LTS; upgrade deliberately.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     labels: ["dependencies", "ci"]
+    groups:
+      github-actions:
+        patterns: ["*"]
