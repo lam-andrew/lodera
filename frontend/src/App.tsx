@@ -20,12 +20,13 @@ export default function App() {
     let active = true;
     getHealth()
       .then((health) => active && setStatus({ kind: "ready", health }))
-      .catch((err: unknown) =>
-        active &&
-        setStatus({
-          kind: "error",
-          message: err instanceof Error ? err.message : "Unknown error",
-        }),
+      .catch(
+        (err: unknown) =>
+          active &&
+          setStatus({
+            kind: "error",
+            message: err instanceof Error ? err.message : "Unknown error",
+          }),
       );
     return () => {
       active = false;
@@ -33,12 +34,28 @@ export default function App() {
   }, []);
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 640, margin: "4rem auto", padding: "0 1rem" }}>
+    <main
+      style={{
+        fontFamily: "system-ui, sans-serif",
+        maxWidth: 640,
+        margin: "4rem auto",
+        padding: "0 1rem",
+      }}
+    >
       <h1>Lodera</h1>
-      <p style={{ color: "#555" }}>Portfolio risk intelligence — measure, contextualize, and explain risk.</p>
+      <p style={{ color: "#555" }}>
+        Portfolio risk intelligence — measure, contextualize, and explain risk.
+      </p>
 
       <section aria-label="Backend status" style={{ marginTop: "2rem" }}>
-        <h2 style={{ fontSize: "1rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#888" }}>
+        <h2
+          style={{
+            fontSize: "1rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            color: "#888",
+          }}
+        >
           Backend status
         </h2>
         {status.kind === "loading" && <p role="status">Checking backend…</p>}
@@ -48,7 +65,9 @@ export default function App() {
           </p>
         )}
         {status.kind === "ready" && (
-          <dl style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "0.25rem 1rem" }}>
+          <dl
+            style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "0.25rem 1rem" }}
+          >
             <dt>Service</dt>
             <dd>{status.health.service}</dd>
             <dt>Status</dt>

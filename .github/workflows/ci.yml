@@ -12,24 +12,38 @@ permissions:
 
 jobs:
   backend:
-    name: Backend — build image & pytest
+    name: Backend — lint, type-check & test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build backend image
         run: docker build -t lodera-backend ./backend
-      - name: Run pytest inside the image
+      - name: Ruff lint
+        run: docker run --rm lodera-backend ruff check .
+      - name: Ruff format check
+        run: docker run --rm lodera-backend ruff format --check .
+      - name: Mypy type check
+        run: docker run --rm lodera-backend mypy app
+      - name: Pytest
         run: docker run --rm lodera-backend pytest
 
   frontend:
-    name: Frontend — build image, typecheck, test & build
+    name: Frontend — lint, type-check, test & build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build frontend image
         run: docker build -t lodera-frontend ./frontend
-      - name: Typecheck, unit tests, and production build inside the image
-        run: docker run --rm lodera-frontend sh -c "npm run test && npm run build"
+      - name: ESLint
+        run: docker run --rm lodera-frontend npm run lint
+      - name: Prettier format check
+        run: docker run --rm lodera-frontend npm run format:check
+      - name: TypeScript type check
+        run: docker run --rm lodera-frontend npm run typecheck
+      - name: Unit tests
+        run: docker run --rm lodera-frontend npm run test
+      - name: Production build
+        run: docker run --rm lodera-frontend npm run build
 
   integration:
     name: Integration — full stack boots & communicates

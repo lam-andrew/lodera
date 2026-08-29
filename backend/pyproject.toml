@@ -16,6 +16,9 @@ dependencies = [
 dev = [
     "pytest>=8.0,<9.0",
     "httpx>=0.27,<1.0",
+    "ruff>=0.6,<1.0",
+    "mypy>=1.11,<2.0",
+    "pip-audit>=2.7,<3.0",
 ]
 
 [build-system]
@@ -29,3 +32,28 @@ include = ["app*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# A pragmatic, non-noisy rule set: pyflakes/pycodestyle errors, import sorting,
+# modern-Python upgrades, bugbear, comprehensions, and Ruff's own checks.
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "BLE", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may use assert-heavy style and fixture arguments freely.
+"tests/**" = ["B011"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+# Third-party packages without type hints shouldn't fail the build.
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Tests exercise runtime behavior; don't require full typing there.
+module = "tests.*"
+disallow_untyped_defs = false

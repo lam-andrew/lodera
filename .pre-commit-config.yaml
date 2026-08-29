@@ -1,0 +1,73 @@
+# Pre-commit quality gates. Fast checks (formatting, lint, types, secret/large-file guards)
+# run on every commit; the full test suites run on push. Install once with:
+#
+#   pip install pre-commit && pre-commit install --install-hooks
+#
+# The local hooks below use system tools, so set up the backend venv (`pip install -e
+# backend[dev]`) and frontend deps (`npm --prefix frontend install`) first — see CONTRIBUTING.md.
+minimum_pre_commit_version: "3.5.0"
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+
+  # Backend: Ruff lint (autofix) + format, scoped to backend/.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (backend)
+        entry: bash -c 'cd backend && mypy app'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      - id: eslint
+        name: eslint (frontend)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+      - id: prettier
+        name: prettier (frontend)
+        entry: bash -c 'cd frontend && npm run format:check'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+      # Full suites — heavier, so gated on push rather than every commit.
+      - id: backend-tests
+        name: pytest (backend)
+        entry: bash -c 'cd backend && pytest'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: frontend-tests
+        name: vitest (frontend)
+        entry: bash -c 'cd frontend && npm run test'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

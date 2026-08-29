@@ -27,3 +27,5 @@ capture an architecturally significant decision, its context, and its consequenc
 | [0004](0004-decoupled-engines-api-contract.md) | Decoupled engines behind an API contract | Accepted |
 | [0005](0005-scope-tiers.md) | Scope tiers: core / secondary / stretch | Accepted |
 | [0006](0006-portfolio-ingestion-manual-csv.md) | Portfolio ingestion via manual entry + CSV for MVP | Accepted |
+| [0007](0007-quality-gates-and-security-scanning.md) | CI quality gates and security scanning | Accepted |
+| [0008](0008-defer-continuous-deployment.md) | Defer Continuous Deployment until a host is selected | Accepted |

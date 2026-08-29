@@ -45,12 +45,45 @@ To run a service on its own outside Docker, see the README in `backend/` and `fr
 Each user story (US-1 … US-15) is a GitHub issue labeled by tier (`core`, `secondary`,
 `stretch`, `architectural`) and sprint, tracked on the project board.
 
+## Quality gates & pre-commit hooks
+
+Quality and security gates run both locally and in CI (see
+[ADR 0007](docs/adr/0007-quality-gates-and-security-scanning.md)). Set them up once:
+
+```bash
+# Backend tools (Ruff, mypy, pytest, pip-audit) into a venv
+cd backend && python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && cd ..
+
+# Frontend tools (ESLint, Prettier, Vitest, tsc)
+npm --prefix frontend install
+
+# Pre-commit: fast checks on commit, test suites on push
+pip install pre-commit
+pre-commit install --install-hooks
+```
+
+The local hooks use system tools, so keep the backend venv active (or on `PATH`) and the
+frontend dependencies installed when committing.
+
+**What runs where**
+
+| Gate | Backend | Frontend |
+|---|---|---|
+| Lint | `ruff check` | `eslint` |
+| Format | `ruff format` | `prettier` |
+| Types | `mypy` (strict) | `tsc --noEmit` |
+| Tests | `pytest` | `vitest` |
+
+Run any of them by hand, e.g. `cd backend && ruff check . && mypy app && pytest`, or
+`npm --prefix frontend run lint`. Run every hook across the repo with
+`pre-commit run --all-files`.
+
 ## Testing expectations
 
 - **New backend logic ships with pytest coverage.** API endpoints are validated in CI.
 - **Frontend components** are tested with Vitest + React Testing Library.
 - **API/integration** checks use Postman collections where applicable.
-- Run the suites locally before opening a PR:
+- Run the suites locally before opening a PR (via pre-commit on push, or directly):
 
 ```bash
 # Backend
@@ -59,6 +92,21 @@ docker compose run --rm backend pytest
 # Frontend
 docker compose run --rm frontend npm test
 ```
+
+## Security scanning
+
+On every push/PR (and weekly), CI runs: **CodeQL** (SAST for Python + TS), **gitleaks**
+(secrets), **pip-audit** / **npm audit** (dependency vulnerabilities), and **Trivy**
+(filesystem vuln/secret/misconfig). **Dependabot** opens dependency-update PRs. Findings surface
+in the repository's **Security** tab and as PRs. Note: CodeQL and Trivy SARIF results require a
+public repository or GitHub Advanced Security.
+
+## CI/CD
+
+CI (`.github/workflows/ci.yml`) builds the container images and runs lint + type-check + tests
+inside them, plus a full-stack integration check. **Continuous Deployment is deferred** until a
+host is chosen — see [ADR 0008](docs/adr/0008-defer-continuous-deployment.md); the deploy
+workflow is a manual-only placeholder until then.
 
 ## Architecture & documentation rules
 
