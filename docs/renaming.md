@@ -16,7 +16,7 @@ Override at runtime without touching code via environment variables:
 ```bash
 # .env
 VITE_APP_NAME=NewName
-LODERA_APP_NAME=NewName API
+APP_NAME=NewName API
 ```
 
 That's the whole change for the name shown in the UI header, browser tab, and API docs.
@@ -31,11 +31,15 @@ them together when you want the codebase itself to stop saying "lodera":
 | `frontend/package.json`, `backend/pyproject.toml` | package `name` (`lodera-frontend`, `lodera-backend`) |
 | `.github/workflows/ci.yml` | Docker image tags `lodera-backend` / `lodera-frontend` |
 | `frontend/index.html` | static fallback `<title>` (pre-hydration only) |
-| `.env.example`, `docker-compose.yml`, `backend/app/core/config.py` | `LODERA_` env prefix; DB name/user (`lodera`) if you also rename the database |
+| `.env.example`, `docker-compose.yml` | DB name/user (`lodera`) if you also rename the database |
 | Comments & docs | `README.md`, `CLAUDE.md`, `docs/**`, file header comments |
 
 Suggested approach: `git grep -il lodera` to list files, review, then a scoped find/replace.
 Re-run the test suites and `docker compose up` afterward.
+
+> The backend env-var prefix is intentionally **`APP_`** (brand-neutral), not the product
+> name, so a rename does **not** touch env var names (`APP_NAME`, `APP_DATABASE_URL`, …).
+> Vite requires the `VITE_` prefix for client vars — also brand-neutral.
 
 ### Renaming the database (optional)
 

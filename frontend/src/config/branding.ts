@@ -7,8 +7,10 @@
  *
  * Everything the user sees (page title, header, etc.) reads from here, so the visible
  * name changes in exactly one place. Technical identifiers (package names, DB name,
- * container tags, the LODERA_ env prefix, repo name) are intentionally NOT wired to this
- * — those are a separate, mechanical rename (see docs/renaming.md if present).
+ * container tags, repo name) are intentionally NOT wired to this
+ * — those are a separate, mechanical rename (see docs/renaming.md if present). The
+ * backend env prefix is intentionally brand-neutral (APP_), so env var names survive a
+ * rename too.
  */
 export const APP_NAME = import.meta.env.VITE_APP_NAME ?? "Lodera";
 
