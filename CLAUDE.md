@@ -88,6 +88,10 @@ document routine coding choices — that creates noise, not signal.
 ## Conventions
 
 - Feature branch → PR → CI must pass → merge to `main`.
+- **Commit often and push regularly.** Prefer small, focused commits over large batched
+  ones, and push the working branch to the GitHub remote (`origin`) frequently — after each
+  logical unit of work, not just at the end of a session — so progress is backed up, visible
+  on GitHub, and exercised by CI early. Don't accumulate many local commits without pushing.
 - Each user story is a GitHub issue (US-1…US-18), labeled by tier + sprint, tracked on the
   project board.
 - Never commit secrets; external services configured via environment variables (`.env`,
