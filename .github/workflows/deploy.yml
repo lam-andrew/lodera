@@ -1,0 +1,25 @@
+name: Deploy (placeholder)
+
+# Continuous Deployment is intentionally deferred until a deployment target is selected.
+# See docs/adr/0008-defer-continuous-deployment.md. This workflow is a manual-only
+# placeholder: it marks where deployment will attach and does nothing until configured.
+#
+# When a host is chosen, a new ADR will supersede 0008 and this job will be implemented to
+# push the CI-built images to a registry and deploy them (e.g. on merge to main or on tag).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy (not yet configured)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain deferred deployment
+        run: |
+          echo "Continuous Deployment is not configured yet."
+          echo "A deployment target has not been selected — see"
+          echo "docs/adr/0008-defer-continuous-deployment.md."
+          echo "CI already builds and tests the deployable images on every push."
