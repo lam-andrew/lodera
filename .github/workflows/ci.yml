@@ -1,0 +1,57 @@
+name: CI
+
+# Build the container images and run the test suites on every push and PR (US-14):
+# the same images that get deployed are the ones built and tested here.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend — build image & pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t lodera-backend ./backend
+      - name: Run pytest inside the image
+        run: docker run --rm lodera-backend pytest
+
+  frontend:
+    name: Frontend — build image, typecheck, test & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build frontend image
+        run: docker build -t lodera-frontend ./frontend
+      - name: Typecheck, unit tests, and production build inside the image
+        run: docker run --rm lodera-frontend sh -c "npm run test && npm run build"
+
+  integration:
+    name: Integration — full stack boots & communicates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bring up the stack
+        run: docker compose up -d --build
+      - name: Wait for the backend to report healthy with a connected database
+        run: |
+          for i in $(seq 1 30); do
+            body="$(curl -sf http://localhost:8000/health || true)"
+            echo "attempt $i: $body"
+            if echo "$body" | grep -q '"database":"connected"'; then
+              echo "Backend healthy and database connected."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Backend did not become healthy in time." >&2
+          docker compose logs --no-color >&2
+          exit 1
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
