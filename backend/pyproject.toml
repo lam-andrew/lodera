@@ -1,7 +1,7 @@
 [project]
-name = "lodera-backend"
+name = "orbit-backend"
 version = "0.1.0"
-description = "Lodera backend — FastAPI API layer and analytical engines (Risk & Exposure core, RAG secondary)."
+description = "Orbit backend — FastAPI API layer and analytical engines (Risk & Exposure core, RAG secondary)."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<1.0",

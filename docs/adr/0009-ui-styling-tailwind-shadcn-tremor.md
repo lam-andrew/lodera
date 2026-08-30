@@ -5,7 +5,7 @@
 
 ## Context
 
-Lodera's value is largely conveyed through its interface: a risk dashboard with dense but
+Orbit's value is largely conveyed through its interface: a risk dashboard with dense but
 readable metrics (volatility, concentration, correlation, drawdown), a holdings table, and
 later a filings Q&A view. The product should be visually appealing and trustworthy, and the
 styling should be consistent, maintainable, accessible, and theme-aware. As a solo project we

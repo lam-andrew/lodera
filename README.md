@@ -1,9 +1,9 @@
-# Lodera — Portfolio Risk Intelligence
+# Orbit — Portfolio Risk Intelligence
 
 > A portfolio risk intelligence platform that helps individual investors understand what they actually hold and what could hurt them. It combines a quantitative **Risk & Exposure engine** (the core) with an evidence-grounded **document-intelligence / RAG layer** (secondary) that explains risk using primary financial filings.
 
 **Status:** Active development · Academic capstone (Penn State MSE, SWENG 894) · Solo project
-**Product name:** Lodera · **Working scope:** MVP over 14 weeks (4 sprints)
+**Product name:** Orbit · **Working scope:** MVP over 14 weeks (4 sprints)
 
 ---
 
@@ -104,7 +104,7 @@ Guiding principles: provider-agnostic + container-based (no lock-in), open-sourc
 > This is the intended structure; it will fill in as sprints progress. Keep the frontend/backend decoupled and the engines isolated behind the API.
 
 ```
-lodera/
+orbit/
 ├── README.md
 ├── docker-compose.yml          # orchestrates backend, frontend, db
 ├── .github/workflows/          # GitHub Actions CI/CD

@@ -1,4 +1,4 @@
-# Lodera Frontend
+# Orbit Frontend
 
 React + TypeScript (Vite). Presentation only — it talks to the backend exclusively through
 the typed API client in `src/api/`, which targets the backend's public API contract (never

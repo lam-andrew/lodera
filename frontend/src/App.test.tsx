@@ -18,7 +18,7 @@ describe("App", () => {
   it("shows backend health once the /health call resolves", async () => {
     vi.spyOn(client, "getHealth").mockResolvedValue({
       status: "ok",
-      service: "Lodera API",
+      service: "Orbit API",
       version: "0.1.0",
       environment: "test",
       database: "connected",
@@ -26,7 +26,7 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Lodera API")).toBeInTheDocument();
+    expect(await screen.findByText("Orbit API")).toBeInTheDocument();
     expect(screen.getByText("connected")).toBeInTheDocument();
   });
 

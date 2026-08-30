@@ -5,7 +5,7 @@
 
 ## Context
 
-Lodera comprises multiple services (FastAPI backend, React frontend, PostgreSQL/pgvector
+Orbit comprises multiple services (FastAPI backend, React frontend, PostgreSQL/pgvector
 database) that must run together locally for development and be deployable to a real host for
 the capstone demos. As a graded software-engineering project, reproducible builds, a
 consistent local/CI/production environment, and portability all matter. A solo developer also

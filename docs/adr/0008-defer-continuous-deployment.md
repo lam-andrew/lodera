@@ -11,7 +11,7 @@ foundation: every push builds the container images and runs the full test and se
 step that ships those images to a running environment — requires a concrete deployment target:
 a host, its credentials, a registry, and a rollback story.
 
-By design, Lodera is provider-agnostic with **no host chosen yet**
+By design, Orbit is provider-agnostic with **no host chosen yet**
 (see [ADR 0003](0003-docker-compose-provider-agnostic.md)); the Sprint 1 goal is a running,
 locally-deployable stack, and the graded demos are the milestones that actually need a hosted
 environment. Wiring a deploy job now would mean either inventing a target we have not committed

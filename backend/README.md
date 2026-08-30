@@ -1,4 +1,4 @@
-# Lodera Backend
+# Orbit Backend
 
 Python 3.12 + FastAPI. The API layer and the analytical engines (Risk & Exposure core; RAG
 secondary). The API package is the backend's public contract; engines are reached only

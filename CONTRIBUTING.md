@@ -1,6 +1,6 @@
-# Contributing to Lodera
+# Contributing to Orbit
 
-Lodera is a solo Penn State MSE capstone (SWENG 894), but it is built to professional
+Orbit is a solo Penn State MSE capstone (SWENG 894), but it is built to professional
 standards — this guide documents the workflow so the process is reproducible and reads clearly
 for review. Please read [`CLAUDE.md`](CLAUDE.md) (the working rulebook) and [`README.md`](README.md)
 (project overview) before contributing.
@@ -16,7 +16,7 @@ for review. Please read [`CLAUDE.md`](CLAUDE.md) (the working rulebook) and [`RE
 
 ```bash
 # 1. Clone
-git clone <repo-url> lodera && cd lodera
+git clone <repo-url> orbit && cd orbit
 
 # 2. Configure environment (never commit real secrets)
 cp .env.example .env        # then fill in values

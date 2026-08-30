@@ -7,8 +7,8 @@ rebrand** (identifiers + repo) is a bounded, mechanical task. This runbook captu
 
 Everything the user sees reads from one constant per side:
 
-- **Frontend:** `frontend/src/config/branding.ts` → `APP_NAME` (fallback `"Lodera"`).
-- **Backend:** `backend/app/core/config.py` → `Settings.app_name` (fallback `"Lodera API"`),
+- **Frontend:** `frontend/src/config/branding.ts` → `APP_NAME` (fallback `"Orbit"`).
+- **Backend:** `backend/app/core/config.py` → `Settings.app_name` (fallback `"Orbit API"`),
   which sets the FastAPI/OpenAPI title and the `/health` `service` field.
 
 Override at runtime without touching code via environment variables:
@@ -24,17 +24,17 @@ That's the whole change for the name shown in the UI header, browser tab, and AP
 ## 2. Full rebrand (identifiers — mechanical find/replace)
 
 These are technical identifiers, intentionally *not* wired to the display constant. Rename
-them together when you want the codebase itself to stop saying "lodera":
+them together when you want the codebase itself to stop saying "orbit":
 
 | Where | What to change |
 |---|---|
-| `frontend/package.json`, `backend/pyproject.toml` | package `name` (`lodera-frontend`, `lodera-backend`) |
-| `.github/workflows/ci.yml` | Docker image tags `lodera-backend` / `lodera-frontend` |
+| `frontend/package.json`, `backend/pyproject.toml` | package `name` (`orbit-frontend`, `orbit-backend`) |
+| `.github/workflows/ci.yml` | Docker image tags `orbit-backend` / `orbit-frontend` |
 | `frontend/index.html` | static fallback `<title>` (pre-hydration only) |
-| `.env.example`, `docker-compose.yml` | DB name/user (`lodera`) if you also rename the database |
+| `.env.example`, `docker-compose.yml` | DB name/user (`orbit`) if you also rename the database |
 | Comments & docs | `README.md`, `CLAUDE.md`, `docs/**`, file header comments |
 
-Suggested approach: `git grep -il lodera` to list files, review, then a scoped find/replace.
+Suggested approach: `git grep -il orbit` to list files, review, then a scoped find/replace.
 Re-run the test suites and `docker compose up` afterward.
 
 > The backend env-var prefix is intentionally **`APP_`** (brand-neutral), not the product
@@ -43,7 +43,7 @@ Re-run the test suites and `docker compose up` afterward.
 
 ### Renaming the database (optional)
 
-The default DB name is `lodera`. Changing `POSTGRES_DB` only affects a **fresh** volume; an
+The default DB name is `orbit`. Changing `POSTGRES_DB` only affects a **fresh** volume; an
 existing dev volume keeps the old name. To reset locally: `docker compose down -v` (destroys
 local data) then `docker compose up`. In a real environment, rename with SQL instead.
 
