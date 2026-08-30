@@ -1,4 +1,4 @@
-# Lodera frontend — React + TypeScript (Vite dev server)
+# Orbit frontend — React + TypeScript (Vite dev server)
 FROM node:20-slim
 
 WORKDIR /app

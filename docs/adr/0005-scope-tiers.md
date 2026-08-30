@@ -5,7 +5,7 @@
 
 ## Context
 
-Lodera is built by a solo developer on a fixed 14-week (4-sprint) capstone timeline. Feature
+Orbit is built by a solo developer on a fixed 14-week (4-sprint) capstone timeline. Feature
 ideas naturally exceed what one person can deliver well in that window, and an unbounded scope
 would put the graded algorithmic centerpiece at risk. Per instructor guidance, the **Risk &
 Exposure engine is the core deliverable**, the RAG layer is secondary, and several attractive

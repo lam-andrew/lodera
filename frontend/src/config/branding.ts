@@ -12,7 +12,7 @@
  * backend env prefix is intentionally brand-neutral (APP_), so env var names survive a
  * rename too.
  */
-export const APP_NAME = import.meta.env.VITE_APP_NAME ?? "Lodera";
+export const APP_NAME = import.meta.env.VITE_APP_NAME ?? "Orbit";
 
 export const APP_TAGLINE =
   "Portfolio risk intelligence — measure, contextualize, and explain risk.";

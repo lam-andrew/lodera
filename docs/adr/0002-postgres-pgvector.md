@@ -5,7 +5,7 @@
 
 ## Context
 
-Lodera stores two kinds of data: **relational data** (users, portfolios, holdings, cached
+Orbit stores two kinds of data: **relational data** (users, portfolios, holdings, cached
 market prices) and **vector embeddings** of SEC filing text for the secondary RAG layer.
 A naive design would run a relational database plus a dedicated vector database as separate
 services. For a solo developer on a 14-week timeline, every additional service is more

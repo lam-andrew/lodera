@@ -1,4 +1,4 @@
-# Lodera backend — Python 3.12 + FastAPI
+# Orbit backend — Python 3.12 + FastAPI
 FROM python:3.12-slim
 
 # - PYTHONDONTWRITEBYTECODE: no .pyc files in the image

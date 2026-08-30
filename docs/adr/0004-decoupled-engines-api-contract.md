@@ -5,7 +5,7 @@
 
 ## Context
 
-Lodera's central value is a quantitative **Risk & Exposure engine** (the core), with a
+Orbit's central value is a quantitative **Risk & Exposure engine** (the core), with a
 secondary **RAG engine** over SEC filings added later, and possible future engines (regime
 detection, anomaly detection) in the backlog. The graded algorithmic core must be buildable,
 testable, and demoable independently of the frontend and of the other engines. If the frontend

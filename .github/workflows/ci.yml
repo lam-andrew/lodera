@@ -17,15 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build backend image
-        run: docker build -t lodera-backend ./backend
+        run: docker build -t orbit-backend ./backend
       - name: Ruff lint
-        run: docker run --rm lodera-backend ruff check .
+        run: docker run --rm orbit-backend ruff check .
       - name: Ruff format check
-        run: docker run --rm lodera-backend ruff format --check .
+        run: docker run --rm orbit-backend ruff format --check .
       - name: Mypy type check
-        run: docker run --rm lodera-backend mypy app
+        run: docker run --rm orbit-backend mypy app
       - name: Pytest
-        run: docker run --rm lodera-backend pytest
+        run: docker run --rm orbit-backend pytest
 
   frontend:
     name: Frontend — lint, type-check, test & build
@@ -33,17 +33,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build frontend image
-        run: docker build -t lodera-frontend ./frontend
+        run: docker build -t orbit-frontend ./frontend
       - name: ESLint
-        run: docker run --rm lodera-frontend npm run lint
+        run: docker run --rm orbit-frontend npm run lint
       - name: Prettier format check
-        run: docker run --rm lodera-frontend npm run format:check
+        run: docker run --rm orbit-frontend npm run format:check
       - name: TypeScript type check
-        run: docker run --rm lodera-frontend npm run typecheck
+        run: docker run --rm orbit-frontend npm run typecheck
       - name: Unit tests
-        run: docker run --rm lodera-frontend npm run test
+        run: docker run --rm orbit-frontend npm run test
       - name: Production build
-        run: docker run --rm lodera-frontend npm run build
+        run: docker run --rm orbit-frontend npm run build
 
   integration:
     name: Integration — full stack boots & communicates

@@ -5,7 +5,7 @@
 
 ## Context
 
-Before Lodera can compute any risk metric it needs a portfolio: a set of holdings (ticker +
+Before Orbit can compute any risk metric it needs a portfolio: a set of holdings (ticker +
 share quantity) to analyze. There are several ways a user could get their holdings into the
 system, ranging from typing them in, to uploading a broker's export file, to connecting a
 brokerage account programmatically (e.g. via Plaid or SnapTrade).

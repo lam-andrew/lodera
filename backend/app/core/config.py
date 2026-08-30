@@ -30,11 +30,11 @@ class Settings(BaseSettings):
 
     # Application metadata. app_name is pinned to the exact env var APP_NAME (rather than
     # the prefixed APP_APP_NAME) via an explicit alias.
-    app_name: str = Field(default="Lodera API", validation_alias="APP_NAME")
+    app_name: str = Field(default="Orbit API", validation_alias="APP_NAME")
     environment: str = "development"
 
     # Database (PostgreSQL 16 + pgvector). Async-agnostic SQLAlchemy DSN.
-    database_url: str = "postgresql+psycopg://lodera:lodera@db:5432/lodera"
+    database_url: str = "postgresql+psycopg://orbit:orbit@db:5432/orbit"
 
     # CORS: origins allowed to call the API (the frontend dev server by default).
     cors_origins: list[str] = ["http://localhost:5173"]

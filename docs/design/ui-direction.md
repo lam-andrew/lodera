@@ -1,6 +1,6 @@
-# Lodera UI direction
+# Orbit UI direction
 
-The visual direction for Lodera's interface, the research behind it, and the design tokens to
+The visual direction for Orbit's interface, the research behind it, and the design tokens to
 build against. The component/styling stack decision lives in
 [ADR 0009](../adr/0009-ui-styling-tailwind-shadcn-tremor.md); this document is the richer
 reference for *how it should look and feel*.
@@ -18,7 +18,7 @@ Dark-first, data-dense but calm. Monochrome, cool-charcoal surfaces with color r
 strictly for financial state (gain/loss and risk level). Tabular figures everywhere. One hero
 metric per card. "Show the data, hide the chrome."
 
-Why this fits Lodera specifically: risk tools easily provoke anxiety. The strongest financial
+Why this fits Orbit specifically: risk tools easily provoke anxiety. The strongest financial
 dashboards counter that with restraint, whitespace, and softer alerting, so the interface reads
 as a calm analyst rather than a flashing monitor. Visual calm reads as trust.
 

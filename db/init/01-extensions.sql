@@ -1,4 +1,4 @@
--- Database initialization for Lodera.
+-- Database initialization for Orbit.
 -- Runs once, automatically, the first time the PostgreSQL data volume is created
 -- (scripts in /docker-entrypoint-initdb.d are executed by the official Postgres image).
 

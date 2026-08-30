@@ -5,7 +5,7 @@
 
 ## Context
 
-Lodera is graded on software-engineering rigor, not just working features. As a solo project
+Orbit is graded on software-engineering rigor, not just working features. As a solo project
 that will accrue feature code quickly across four sprints, defects and inconsistencies are
 cheapest to catch automatically and early — before code review or a demo. We want the same
 industry-standard guardrails a professional team would run: consistent formatting, static

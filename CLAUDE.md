@@ -1,4 +1,4 @@
-# CLAUDE.md — Lodera
+# CLAUDE.md — Orbit
 
 Agent-facing context and working rules for this repository. Every Claude Code session
 should read this file first. Human-facing project detail lives in `README.md`; this file
@@ -9,7 +9,7 @@ follow the user, but flag the conflict.
 
 ## Project in one paragraph
 
-**Lodera** is a portfolio risk intelligence web app for individual investors. It combines a
+**Orbit** is a portfolio risk intelligence web app for individual investors. It combines a
 quantitative **Risk & Exposure engine** (the core) with an evidence-grounded **RAG layer**
 over SEC filings (secondary). It **measures, contextualizes, and explains** risk. It does
 **NOT** predict prices, execute trades, or give investment advice. This is a Penn State MSE

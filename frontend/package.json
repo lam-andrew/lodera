@@ -1,9 +1,9 @@
 {
-  "name": "lodera-frontend",
+  "name": "orbit-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Lodera frontend — React + TypeScript. Presentation only; talks to the backend over REST.",
+  "description": "Orbit frontend — React + TypeScript. Presentation only; talks to the backend over REST.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

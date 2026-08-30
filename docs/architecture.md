@@ -1,6 +1,6 @@
-# Lodera — Architecture
+# Orbit — Architecture
 
-This document describes Lodera's architecture using the [C4 model](https://c4model.com/).
+This document describes Orbit's architecture using the [C4 model](https://c4model.com/).
 Diagrams are kept as **Mermaid** in Markdown so they render natively on GitHub and stay
 version-controlled as text. Keep these diagrams consistent with `README.md` §2 and with the
 Architecture Decision Records in [`docs/adr/`](adr/). A stale diagram is worse than none — update
@@ -8,8 +8,8 @@ it whenever the architecture changes.
 
 Currently maintained levels:
 
-- **Level 1 — System Context:** Lodera as a black box among its users and external systems.
-- **Level 2 — Container:** the deployable/runnable pieces inside Lodera and how they talk.
+- **Level 1 — System Context:** Orbit as a black box among its users and external systems.
+- **Level 2 — Container:** the deployable/runnable pieces inside Orbit and how they talk.
 
 Level 3 (Component) diagrams are added only where the detail earns its place — most likely the
 Risk & Exposure engine, since it is the graded algorithmic core.
@@ -18,25 +18,25 @@ Risk & Exposure engine, since it is the graded algorithmic core.
 
 ## Level 1 — System Context
 
-Who and what Lodera interacts with. Lodera measures, contextualizes, and explains portfolio
+Who and what Orbit interacts with. Orbit measures, contextualizes, and explains portfolio
 risk; it does **not** predict prices, execute trades, or give investment advice.
 
 ```mermaid
 C4Context
-    title System Context — Lodera
+    title System Context — Orbit
 
     Person(investor, "Individual Investor", "Self-directed investor holding stocks and ETFs who wants evidence-based risk insight.")
 
-    System(lodera, "Lodera", "Portfolio risk intelligence. Ingests a portfolio, computes risk & exposure metrics, and explains risk with citations grounded in SEC filings.")
+    System(orbit, "Orbit", "Portfolio risk intelligence. Ingests a portfolio, computes risk & exposure metrics, and explains risk with citations grounded in SEC filings.")
 
     System_Ext(marketdata, "Market-Data API", "Free external source of historical prices (cached locally).")
     System_Ext(edgar, "SEC EDGAR", "Public source of company filings (10-K, 10-Q, 8-K).")
     System_Ext(llm, "Hosted LLM API", "Embeddings + text generation for grounded RAG answers. Accessed behind an interface.")
 
-    Rel(investor, lodera, "Enters a portfolio; views risk dashboard; asks grounded questions", "HTTPS")
-    Rel(lodera, marketdata, "Retrieves historical prices", "HTTPS (cached)")
-    Rel(lodera, edgar, "Retrieves filings", "HTTPS")
-    Rel(lodera, llm, "Requests embeddings & grounded answers", "HTTPS")
+    Rel(investor, orbit, "Enters a portfolio; views risk dashboard; asks grounded questions", "HTTPS")
+    Rel(orbit, marketdata, "Retrieves historical prices", "HTTPS (cached)")
+    Rel(orbit, edgar, "Retrieves filings", "HTTPS")
+    Rel(orbit, llm, "Requests embeddings & grounded answers", "HTTPS")
 
     UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
 ```
@@ -51,7 +51,7 @@ C4Context
 
 ## Level 2 — Container
 
-The runnable/deployable units inside the Lodera boundary. Everything inside the dashed boundary
+The runnable/deployable units inside the Orbit boundary. Everything inside the dashed boundary
 runs as Docker Compose services (see [ADR 0003](adr/0003-docker-compose-provider-agnostic.md));
 external systems and CI/CD sit outside it. The analytical engines are decoupled behind the API
 contract (see [ADR 0004](adr/0004-decoupled-engines-api-contract.md)): the frontend and each
@@ -59,11 +59,11 @@ engine reach another engine **only** through the backend's API routes.
 
 ```mermaid
 C4Container
-    title Container Diagram — Lodera
+    title Container Diagram — Orbit
 
     Person(investor, "Individual Investor", "Holds stocks/ETFs; wants risk insight.")
 
-    System_Boundary(lodera, "Lodera (Docker Compose)") {
+    System_Boundary(orbit, "Orbit (Docker Compose)") {
         Container(frontend, "Frontend", "React + TypeScript", "Presentation only: portfolio entry, risk dashboard + visualizations, natural-language Q&A. Talks to the backend over REST/JSON.")
 
         Container(backend, "Backend / API layer", "Python 3.12 + FastAPI", "Single entry point & orchestrator: auth, routing, input validation, engine invocation. Exposes engines only through the API contract.")

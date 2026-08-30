@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory holds Lodera's Architecture Decision Records (ADRs): short documents that
+This directory holds Orbit's Architecture Decision Records (ADRs): short documents that
 capture an architecturally significant decision, its context, and its consequences.
 
 ## Conventions

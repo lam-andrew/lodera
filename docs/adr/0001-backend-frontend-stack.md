@@ -5,7 +5,7 @@
 
 ## Context
 
-Lodera is a portfolio risk intelligence web application built as a Penn State MSE capstone
+Orbit is a portfolio risk intelligence web application built as a Penn State MSE capstone
 (SWENG 894) by a solo developer on a fixed 14-week timeline. The product has two analytical
 workloads: a quantitative **Risk & Exposure engine** (the graded algorithmic core —
 volatility, correlation, concentration, drawdown, stress testing) and a secondary
