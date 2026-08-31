@@ -1,50 +1,106 @@
 /**
- * Root application component — the US-1 portfolio screen: a header with a live backend-status
- * pill, the holdings list, and the add-holding form.
+ * Application routes and shell (US-10).
+ *
+ * Portfolio data is loaded once here and shared across pages, so navigating between the
+ * overview and holdings does not refetch prices, risk and correlation each time.
  */
-import { useEffect, useState } from "react";
+import { Route, Routes } from "react-router-dom";
 
-import { getHealth } from "@/api/client";
-import { APP_NAME, APP_TAGLINE } from "@/config/branding";
-import { PortfolioView } from "@/features/holdings/PortfolioView";
+import { AppShell } from "@/components/layout/AppShell";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePortfolio, type PortfolioData, type PortfolioState } from "@/hooks/usePortfolio";
+import { CorrelationPage } from "@/pages/CorrelationPage";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { HoldingsPage } from "@/pages/HoldingsPage";
 
-function BackendStatus() {
-  const [ok, setOk] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getHealth()
-      .then((health) => active && setOk(health.database === "connected"))
-      .catch(() => active && setOk(false));
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const label = ok === null ? "Checking…" : ok ? "Connected" : "Offline";
-  const dot = ok ? "bg-up" : ok === false ? "bg-down" : "bg-faint";
-
+function Loading() {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted-foreground">
-      <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
-      {label}
-    </span>
+    <p role="status" className="py-16 text-center text-sm text-faint">
+      Loading portfolio…
+    </p>
   );
 }
 
-export default function App() {
+function LoadError({ message }: { message: string }) {
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-3xl px-5 py-10">
-        <header className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{APP_NAME}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{APP_TAGLINE}</p>
-          </div>
-          <BackendStatus />
-        </header>
-        <PortfolioView />
-      </div>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Could not load your portfolio</CardTitle>
+        <CardDescription>{message}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Check that the backend is running, then reload the page.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Renders its children only once portfolio data is available, showing the shared loading
+ *  and error states otherwise — so each page can assume it has data. */
+function Loaded({
+  state,
+  children,
+}: {
+  state: PortfolioState;
+  children: (data: PortfolioData) => JSX.Element;
+}) {
+  if (state.kind === "loading") return <Loading />;
+  if (state.kind === "error") return <LoadError message={state.message} />;
+  return children(state.data);
+}
+
+export default function App() {
+  const { state, refresh } = usePortfolio();
+  const positions = state.kind === "ready" ? state.data.summary.positions.length : 0;
+
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <AppShell
+            title="Risk overview"
+            subtitle={`Personal portfolio · ${positions} ${positions === 1 ? "position" : "positions"}`}
+          >
+            <Loaded state={state}>
+              {(data) => <DashboardPage data={data} onChanged={refresh} />}
+            </Loaded>
+          </AppShell>
+        }
+      />
+      <Route
+        path="/holdings"
+        element={
+          <AppShell title="Holdings" subtitle="Add, edit, import and remove positions">
+            <Loaded state={state}>
+              {(data) => <HoldingsPage data={data} onChanged={refresh} />}
+            </Loaded>
+          </AppShell>
+        }
+      />
+      <Route
+        path="/correlation"
+        element={
+          <AppShell title="Correlation" subtitle="How your holdings move relative to each other">
+            <Loaded state={state}>{(data) => <CorrelationPage data={data} />}</Loaded>
+          </AppShell>
+        }
+      />
+      <Route
+        path="*"
+        element={
+          <AppShell title="Page not found">
+            <Card>
+              <CardHeader>
+                <CardTitle>That page doesn&apos;t exist</CardTitle>
+                <CardDescription>Pick a destination from the sidebar.</CardDescription>
+              </CardHeader>
+            </Card>
+          </AppShell>
+        }
+      />
+    </Routes>
   );
 }

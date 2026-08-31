@@ -7,17 +7,23 @@ meet; risk metrics land here as their stories arrive (US-5 onward).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api._portfolio_series import load_portfolio_series
 from app.api.holdings import DEFAULT_PORTFOLIO_NAME
 from app.api.market_data import ServiceDep
-from app.api.schemas import PortfolioSummaryRead, PositionRead
+from app.api.schemas import (
+    PortfolioHistoryRead,
+    PortfolioSummaryRead,
+    PortfolioValuePointRead,
+    PositionRead,
+)
 from app.core.database import get_session
 from app.data.provider import MarketDataError
 from app.models import Holding, Portfolio
@@ -96,4 +102,48 @@ def get_summary(session: SessionDep, service: ServiceDep) -> PortfolioSummaryRea
         positions=positions,
         total_value=total.quantize(Decimal("0.01")) if priced_any else None,
         priced=priced_any,
+    )
+
+
+@router.get("/history", response_model=PortfolioHistoryRead)
+def get_history(
+    session: SessionDep,
+    service: ServiceDep,
+    days: Annotated[int, Query(ge=30, le=3650)] = 365,
+) -> PortfolioHistoryRead:
+    """Portfolio market value over time, at today's share quantities.
+
+    Each point is ``sum(adjusted_close * quantity)`` across holdings on a shared trading
+    day. Holding quantities are held constant at their current values, so the series shows
+    how *this* portfolio would have moved — it is not a record of past trading activity.
+    """
+    data = load_portfolio_series(session, service, days=days)
+
+    if not data.priced_tickers:
+        return PortfolioHistoryRead(points=[], start=None, end=None)
+
+    quantities = {h.ticker: h.quantity for h in data.holdings}
+
+    # Only dates every priced holding shares, so the total is never a partial sum.
+    common: set[date] | None = None
+    for ticker in data.priced_tickers:
+        dates = set(data.prices[ticker])
+        common = dates if common is None else (common & dates)
+
+    points = [
+        PortfolioValuePointRead(
+            date=day,
+            # Decimal start value: sum() returns int 0 on an empty iterable.
+            value=sum(
+                (data.prices[t][day] * quantities[t] for t in data.priced_tickers),
+                Decimal("0"),
+            ).quantize(Decimal("0.01")),
+        )
+        for day in sorted(common or set())
+    ]
+
+    return PortfolioHistoryRead(
+        points=points,
+        start=points[0].date if points else None,
+        end=points[-1].date if points else None,
     )

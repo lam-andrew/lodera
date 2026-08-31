@@ -208,3 +208,22 @@ class PortfolioCorrelationRead(BaseModel):
     #: Reference points the UI uses to label a pair, exposed so client and server agree.
     high_threshold: Decimal
     low_threshold: Decimal
+
+
+class PortfolioValuePointRead(BaseModel):
+    """Portfolio market value on one trading day."""
+
+    date: dt.date
+    value: Decimal
+
+
+class PortfolioHistoryRead(BaseModel):
+    """Portfolio value over time at today's share quantities (US-10).
+
+    Quantities are held constant, so this shows how the *current* portfolio would have
+    moved — it is not a record of past trades. US-8 builds drawdown on this series.
+    """
+
+    points: list[PortfolioValuePointRead]
+    start: dt.date | None = None
+    end: dt.date | None = None

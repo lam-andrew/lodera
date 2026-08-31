@@ -189,3 +189,40 @@ def test_correlation_thresholds_are_exposed(client: TestClient) -> None:
     body = client.get("/portfolio/correlation").json()
     assert Decimal(body["high_threshold"]) == Decimal("0.75")
     assert Decimal(body["low_threshold"]) == Decimal("0.30")
+
+
+# --- US-10: portfolio value history ---------------------------------------------
+
+
+def test_history_returns_a_value_series(client: TestClient) -> None:
+    _add(client, "AAPL", "10")
+    _add(client, "MSFT", "5")
+
+    body = client.get("/portfolio/history").json()
+    assert len(body["points"]) > 100
+    assert body["start"] < body["end"]
+
+    for point in body["points"][:5]:
+        assert Decimal(point["value"]) > 0
+    # dates are in ascending order
+    dates = [p["date"] for p in body["points"]]
+    assert dates == sorted(dates)
+
+
+def test_history_value_equals_price_times_quantity(client: TestClient) -> None:
+    """A single holding's value series is just its price scaled by the share count."""
+    _add(client, "AAPL", "3")
+
+    history = client.get("/portfolio/history").json()["points"]
+    prices = client.get("/market-data/AAPL/prices?days=365").json()["bars"]
+    by_date = {b["date"]: Decimal(b["adj_close"]) for b in prices}
+
+    for point in history[:5]:
+        expected = (by_date[point["date"]] * 3).quantize(Decimal("0.01"))
+        assert Decimal(point["value"]) == expected
+
+
+def test_history_of_an_empty_portfolio_is_empty(client: TestClient) -> None:
+    body = client.get("/portfolio/history").json()
+    assert body["points"] == []
+    assert body["start"] is None

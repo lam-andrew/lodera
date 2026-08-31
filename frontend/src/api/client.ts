@@ -176,3 +176,21 @@ export async function getPortfolioCorrelation(): Promise<PortfolioCorrelation> {
   const { data } = await api.get<PortfolioCorrelation>("/portfolio/correlation");
   return data;
 }
+
+/** One point on the portfolio value series (US-10). */
+export interface ValuePoint {
+  date: string;
+  value: string;
+}
+
+export interface PortfolioHistory {
+  points: ValuePoint[];
+  start: string | null;
+  end: string | null;
+}
+
+/** Portfolio market value over time, at today's share quantities. */
+export async function getPortfolioHistory(): Promise<PortfolioHistory> {
+  const { data } = await api.get<PortfolioHistory>("/portfolio/history");
+  return data;
+}
