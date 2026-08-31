@@ -150,3 +150,29 @@ export async function importHoldings(file: File): Promise<ImportResult> {
   const { data } = await api.post<ImportResult>("/holdings/import", form);
   return data;
 }
+
+/** Two holdings and how closely they move together (US-6). */
+export interface CorrelationPair {
+  a: string;
+  b: string;
+  correlation: string;
+}
+
+export interface PortfolioCorrelation {
+  tickers: string[];
+  /** matrix[i][j] = correlation between tickers[i] and tickers[j]; null when undefined. */
+  matrix: (string | null)[][];
+  most_correlated: CorrelationPair[];
+  least_correlated: CorrelationPair[];
+  average_correlation: string | null;
+  window_days: number;
+  observations: number;
+  high_threshold: string;
+  low_threshold: string;
+}
+
+/** Correlation structure among the portfolio's holdings. */
+export async function getPortfolioCorrelation(): Promise<PortfolioCorrelation> {
+  const { data } = await api.get<PortfolioCorrelation>("/portfolio/correlation");
+  return data;
+}

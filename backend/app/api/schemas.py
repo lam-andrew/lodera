@@ -179,3 +179,32 @@ class ImportResultRead(BaseModel):
     #: Which columns the parser matched, so the user can tell it read their file correctly.
     ticker_column: str | None = None
     quantity_column: str | None = None
+
+
+class CorrelationPairRead(BaseModel):
+    """Two holdings and how closely they move together (US-6)."""
+
+    a: str
+    b: str
+    correlation: Decimal
+
+
+class PortfolioCorrelationRead(BaseModel):
+    """Correlation structure among holdings (US-6, FR-8).
+
+    ``matrix[i][j]`` is the correlation between ``tickers[i]`` and ``tickers[j]``; a cell is
+    ``None`` when it is undefined (a holding with no price variation over the window).
+    """
+
+    tickers: list[str]
+    matrix: list[list[Decimal | None]]
+    #: Pairs that move together most — where concentration hides.
+    most_correlated: list[CorrelationPairRead]
+    #: Pairs that move together least — where diversification comes from.
+    least_correlated: list[CorrelationPairRead]
+    average_correlation: Decimal | None = None
+    window_days: int
+    observations: int
+    #: Reference points the UI uses to label a pair, exposed so client and server agree.
+    high_threshold: Decimal
+    low_threshold: Decimal
