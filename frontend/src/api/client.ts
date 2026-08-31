@@ -126,3 +126,27 @@ export async function getPortfolioRisk(): Promise<PortfolioRisk> {
   const { data } = await api.get<PortfolioRisk>("/portfolio/risk");
   return data;
 }
+
+/** A CSV row that could not be imported (US-2, FR-3). */
+export interface ImportProblem {
+  row: number;
+  reason: string;
+  content: string;
+}
+
+export interface ImportResult {
+  added: string[];
+  updated: string[];
+  problems: ImportProblem[];
+  skipped: number;
+  ticker_column: string | null;
+  quantity_column: string | null;
+}
+
+/** Upload a CSV / brokerage positions export. */
+export async function importHoldings(file: File): Promise<ImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post<ImportResult>("/holdings/import", form);
+  return data;
+}

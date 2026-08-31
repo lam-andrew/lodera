@@ -154,3 +154,28 @@ class PortfolioRiskRead(BaseModel):
     window_days: int
     #: Daily returns shared by all priced holdings, backing the portfolio figure.
     observations: int
+
+
+class ImportProblemRead(BaseModel):
+    """A CSV row that could not be imported, reported back to the user (FR-3)."""
+
+    row: int
+    reason: str
+    content: str
+
+
+class ImportResultRead(BaseModel):
+    """Outcome of a portfolio CSV import (US-2).
+
+    Valid rows are imported even when others fail, so a single bad line never costs the
+    user the whole upload.
+    """
+
+    added: list[str]
+    updated: list[str]
+    problems: list[ImportProblemRead]
+    #: Rows deliberately ignored (cash lines, totals, disclaimer text) — not failures.
+    skipped: int
+    #: Which columns the parser matched, so the user can tell it read their file correctly.
+    ticker_column: str | None = None
+    quantity_column: str | None = None
