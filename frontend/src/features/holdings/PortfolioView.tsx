@@ -9,6 +9,7 @@ import {
   type PortfolioSummary,
 } from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImportCard } from "@/features/import/ImportCard";
 import { RiskCard } from "@/features/risk/RiskCard";
 
 import { AddHoldingForm } from "./AddHoldingForm";
@@ -114,6 +115,8 @@ export function PortfolioView() {
           <AddHoldingForm onAdded={() => void refresh()} />
         </CardContent>
       </Card>
+
+      <ImportCard onImported={() => void refresh()} />
     </div>
   );
 }

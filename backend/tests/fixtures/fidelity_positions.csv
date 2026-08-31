@@ -1,0 +1,9 @@
+Account Number,Account Name,Symbol,Description,Quantity,Last Price,Current Value,Total Gain/Loss Dollar
+X12345678,Individual,AAPL,APPLE INC,"1,250.000","$319.70","$399,625.00","$45,120.10"
+X12345678,Individual,MSFT,MICROSOFT CORP,"85.000","$513.53","$43,650.05","$3,201.55"
+X12345678,Individual,SPAXX**,FIDELITY GOVERNMENT MONEY MARKET,"12,004.510","$1.00","$12,004.51",--
+X12345678,Individual,Pending Activity,,,,"$0.00",
+X12345678,Individual,VOO,VANGUARD S&P 500 ETF,"40.000","$707.24","$28,289.60","$2,010.00"
+
+"Brokerage services are provided by Fidelity Brokerage Services LLC."
+"Date downloaded 08/30/2026 3:11 PM ET"

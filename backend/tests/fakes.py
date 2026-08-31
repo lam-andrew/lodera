@@ -27,12 +27,18 @@ _DAILY_SIGMA: dict[str, float] = {
 }
 _DEFAULT_SIGMA = 0.015
 
+#: Symbols the fake recognizes. Covers everything used by the CSV fixtures so import tests
+#: exercise the real provider-validation path rather than tripping over an unknown symbol.
+_DEFAULT_KNOWN = frozenset(
+    {"AAPL", "MSFT", "NVDA", "VTI", "VOO", "QQQ", "BND", "TSLA", "GOOGL", "BRK.B"}
+)
+
 
 class FakeProvider:
     """Deterministic bars, plus counters so tests can assert on cache behaviour."""
 
     def __init__(self, known: set[str] | None = None) -> None:
-        self.known = known if known is not None else {"AAPL", "MSFT", "NVDA", "VTI"}
+        self.known = known if known is not None else set(_DEFAULT_KNOWN)
         self.price_calls = 0
         self.symbol_calls = 0
 
