@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens (see docs/design/ui-direction.md). Dark-first: the app renders dark by
+   default (the <html> element carries the `dark` class); the light palette is the fallback. */
+@layer base {
+  :root {
+    --background: #f5f6f9;
+    --surface: #ffffff;
+    --surface-2: #eef1f5;
+    --border: #e7eaef;
+    --foreground: #101620;
+    --muted-foreground: #4a525e;
+    --faint: #7a838f;
+    --accent: #2a78d6;
+    --accent-foreground: #ffffff;
+    --up: #0f8a3c;
+    --down: #d03b3b;
+    --ring: #2a78d6;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: #090c11;
+    --surface: #111620;
+    --surface-2: #171d28;
+    --border: #212a36;
+    --foreground: #eaeef4;
+    --muted-foreground: #a7b1c0;
+    --faint: #6c7686;
+    --accent: #4a93f0;
+    --accent-foreground: #06101f;
+    --up: #3ec38a;
+    --down: #f0655f;
+    --ring: #4a93f0;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

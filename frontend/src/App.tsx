@@ -1,85 +1,50 @@
 /**
- * Root application component.
- *
- * For the Sprint 1 skeleton this simply proves the end-to-end slice: the frontend calls the
- * backend's `/health` contract and renders the result. Feature UI (portfolio entry, risk
- * dashboard, Q&A) replaces this as their user stories land.
+ * Root application component — the US-1 portfolio screen: a header with a live backend-status
+ * pill, the holdings list, and the add-holding form.
  */
 import { useEffect, useState } from "react";
-import { getHealth, type HealthResponse } from "./api/client";
-import { APP_NAME, APP_TAGLINE } from "./config/branding";
 
-type Status =
-  | { kind: "loading" }
-  | { kind: "ready"; health: HealthResponse }
-  | { kind: "error"; message: string };
+import { getHealth } from "@/api/client";
+import { APP_NAME, APP_TAGLINE } from "@/config/branding";
+import { PortfolioView } from "@/features/holdings/PortfolioView";
 
-export default function App() {
-  const [status, setStatus] = useState<Status>({ kind: "loading" });
+function BackendStatus() {
+  const [ok, setOk] = useState<boolean | null>(null);
 
   useEffect(() => {
     let active = true;
     getHealth()
-      .then((health) => active && setStatus({ kind: "ready", health }))
-      .catch(
-        (err: unknown) =>
-          active &&
-          setStatus({
-            kind: "error",
-            message: err instanceof Error ? err.message : "Unknown error",
-          }),
-      );
+      .then((health) => active && setOk(health.database === "connected"))
+      .catch(() => active && setOk(false));
     return () => {
       active = false;
     };
   }, []);
 
-  return (
-    <main
-      style={{
-        fontFamily: "system-ui, sans-serif",
-        maxWidth: 640,
-        margin: "4rem auto",
-        padding: "0 1rem",
-      }}
-    >
-      <h1>{APP_NAME}</h1>
-      <p style={{ color: "#555" }}>{APP_TAGLINE}</p>
+  const label = ok === null ? "Checking…" : ok ? "Connected" : "Offline";
+  const dot = ok ? "bg-up" : ok === false ? "bg-down" : "bg-faint";
 
-      <section aria-label="Backend status" style={{ marginTop: "2rem" }}>
-        <h2
-          style={{
-            fontSize: "1rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            color: "#888",
-          }}
-        >
-          Backend status
-        </h2>
-        {status.kind === "loading" && <p role="status">Checking backend…</p>}
-        {status.kind === "error" && (
-          <p role="alert" style={{ color: "#b00020" }}>
-            Cannot reach backend: {status.message}
-          </p>
-        )}
-        {status.kind === "ready" && (
-          <dl
-            style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "0.25rem 1rem" }}
-          >
-            <dt>Service</dt>
-            <dd>{status.health.service}</dd>
-            <dt>Status</dt>
-            <dd>{status.health.status}</dd>
-            <dt>Version</dt>
-            <dd>{status.health.version}</dd>
-            <dt>Environment</dt>
-            <dd>{status.health.environment}</dd>
-            <dt>Database</dt>
-            <dd>{status.health.database}</dd>
-          </dl>
-        )}
-      </section>
-    </main>
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted-foreground">
+      <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+export default function App() {
+  return (
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-3xl px-5 py-10">
+        <header className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">{APP_NAME}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{APP_TAGLINE}</p>
+          </div>
+          <BackendStatus />
+        </header>
+        <PortfolioView />
+      </div>
+    </div>
   );
 }

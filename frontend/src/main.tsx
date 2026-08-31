@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { APP_TITLE } from "./config/branding";
+import "./index.css";
 
 // Drive the browser tab title from the single branding source (the static title in
 // index.html is only a pre-hydration fallback).
