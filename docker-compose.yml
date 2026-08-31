@@ -43,7 +43,8 @@ services:
     volumes:
       # Live-reload the source during development.
       - ./backend:/app
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # Apply DB migrations before serving (Alembic; see ADR 0010).
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
   frontend:
     build: ./frontend
