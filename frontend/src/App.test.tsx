@@ -12,6 +12,7 @@ const okHealth = {
   version: "0.1.0",
   environment: "test",
   database: "connected" as const,
+  market_data: "configured" as const,
 };
 
 describe("App", () => {

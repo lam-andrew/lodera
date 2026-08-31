@@ -38,6 +38,10 @@ services:
     environment:
       APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
       APP_DATABASE_URL: ${APP_DATABASE_URL:-postgresql+psycopg://orbit:orbit@db:5432/orbit}
+      # Market data (US-4). Supplied from .env; empty until a key is configured.
+      APP_MARKET_DATA_PROVIDER: ${APP_MARKET_DATA_PROVIDER:-tiingo}
+      APP_MARKET_DATA_API_KEY: ${APP_MARKET_DATA_API_KEY:-}
+      APP_MARKET_DATA_CACHE_TTL_HOURS: ${APP_MARKET_DATA_CACHE_TTL_HOURS:-24}
     ports:
       - "8000:8000"
     volumes:

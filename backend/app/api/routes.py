@@ -31,4 +31,5 @@ def health() -> HealthResponse:
         version=__version__,
         environment=settings.environment,
         database="connected" if check_database() else "unavailable",
+        market_data="configured" if settings.market_data_configured else "unconfigured",
     )

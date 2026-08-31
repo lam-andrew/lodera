@@ -39,6 +39,8 @@ export interface HealthResponse {
   version: string;
   environment: string;
   database: "connected" | "unavailable";
+  /** Whether a market-data API key is configured (US-4). */
+  market_data: "configured" | "unconfigured";
 }
 
 /** Fetch backend liveness + database status. */
