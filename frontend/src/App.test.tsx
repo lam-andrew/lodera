@@ -206,16 +206,17 @@ describe("Navigation (US-10)", () => {
 
   it("routes to the holdings page with the editing tools", async () => {
     renderAt("/holdings");
-    expect(await screen.findByRole("heading", { name: /^holdings$/i })).toBeInTheDocument();
-    expect(screen.getByText(/add a holding/i)).toBeInTheDocument();
+    // Await content that only exists once data has loaded — the shell heading renders
+    // immediately from the page title, so awaiting it would race the data.
+    expect(await screen.findByText(/add a holding/i)).toBeInTheDocument();
     expect(screen.getByText(/import from a csv/i)).toBeInTheDocument();
+    // Two "Holdings" headings exist: the shell title (h1) and the card title (h2).
+    expect(screen.getByRole("heading", { level: 1, name: /^holdings$/i })).toBeInTheDocument();
   });
 
   it("routes to the correlation page", async () => {
     renderAt("/correlation");
-    expect(
-      await screen.findByRole("heading", { name: /how your holdings move|^correlation$/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/how your holdings move relative/i)).toBeInTheDocument();
   });
 
   it("navigates from the sidebar", async () => {
