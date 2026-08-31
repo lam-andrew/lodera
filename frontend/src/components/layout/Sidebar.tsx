@@ -47,6 +47,16 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Insights",
     items: [{ label: "Filings Q&A", soon: true, icon: icon("M4 4h11l5 5v11H4V4Zm4 8h8M8 16h5") }],
   },
+  {
+    title: "Reference",
+    items: [
+      {
+        label: "How this is calculated",
+        to: "/methodology",
+        icon: icon("M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18Zm0 5v5m0 3h.01"),
+      },
+    ],
+  },
 ];
 
 const base =

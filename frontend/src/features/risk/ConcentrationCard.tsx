@@ -1,5 +1,6 @@
 import type { PortfolioConcentration } from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExplainLink } from "@/features/methodology/ExplainLink";
 
 function pct(value: string | null): string {
   if (value === null) return "—";
@@ -34,6 +35,7 @@ export function ConcentrationCard({ data }: { data: PortfolioConcentration }) {
       <CardHeader>
         <div className="flex items-baseline justify-between gap-3">
           <CardTitle>Concentration</CardTitle>
+          <ExplainLink anchor="concentration" />
           <span className="font-mono text-xs text-faint">HHI {data.hhi}</span>
         </div>
         <CardDescription>How much of the portfolio depends on any single thing.</CardDescription>

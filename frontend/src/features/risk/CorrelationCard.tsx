@@ -1,5 +1,6 @@
 import type { PortfolioCorrelation } from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExplainLink } from "@/features/methodology/ExplainLink";
 
 /** Diverging scale for a correlation cell.
  *
@@ -64,8 +65,11 @@ export function CorrelationCard({ correlation }: CorrelationCardProps) {
       <CardHeader>
         <div className="flex items-baseline justify-between gap-3">
           <CardTitle>Correlation</CardTitle>
-          <span className="font-mono text-xs text-faint">
-            {correlation.observations} trading days
+          <span className="flex items-baseline gap-3">
+            <span className="font-mono text-xs text-faint">
+              {correlation.observations} trading days
+            </span>
+            <ExplainLink anchor="correlation" />
           </span>
         </div>
         <CardDescription>

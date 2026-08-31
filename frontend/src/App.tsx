@@ -13,6 +13,7 @@ import { ConcentrationPage } from "@/pages/ConcentrationPage";
 import { CorrelationPage } from "@/pages/CorrelationPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { DrawdownPage } from "@/pages/DrawdownPage";
+import { MethodologyPage } from "@/pages/MethodologyPage";
 import { HoldingsPage } from "@/pages/HoldingsPage";
 
 function Loading() {
@@ -103,6 +104,17 @@ export default function App() {
         element={
           <AppShell title="Drawdown" subtitle="The portfolio's worst historical declines">
             <Loaded state={state}>{(data) => <DrawdownPage data={data} />}</Loaded>
+          </AppShell>
+        }
+      />
+      <Route
+        path="/methodology"
+        element={
+          <AppShell
+            title="How this is calculated"
+            subtitle="The method behind every risk figure, and what it does not model"
+          >
+            <Loaded state={state}>{(data) => <MethodologyPage data={data} />}</Loaded>
           </AppShell>
         }
       />
