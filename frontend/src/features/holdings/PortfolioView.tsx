@@ -1,23 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { getHoldings, toErrorMessage, type Holding } from "@/api/client";
+import { getPortfolioSummary, toErrorMessage, type PortfolioSummary } from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { AddHoldingForm } from "./AddHoldingForm";
 import { HoldingsTable } from "./HoldingsTable";
 
-type LoadState = { kind: "loading" } | { kind: "ready" } | { kind: "error"; message: string };
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "ready"; summary: PortfolioSummary }
+  | { kind: "error"; message: string };
 
-/** The portfolio screen for US-1: lists holdings and lets the user add one. */
+/** The portfolio screen: holdings with live prices (US-1, US-3, US-4). */
 export function PortfolioView() {
-  const [holdings, setHoldings] = useState<Holding[]>([]);
   const [load, setLoad] = useState<LoadState>({ kind: "loading" });
 
-  // Re-fetch the list (used after a successful add).
   const refresh = useCallback(async () => {
     try {
-      setHoldings(await getHoldings());
-      setLoad({ kind: "ready" });
+      setLoad({ kind: "ready", summary: await getPortfolioSummary() });
     } catch (err) {
       setLoad({ kind: "error", message: toErrorMessage(err) });
     }
@@ -28,11 +28,8 @@ export function PortfolioView() {
     let active = true;
     void (async () => {
       try {
-        const data = await getHoldings();
-        if (active) {
-          setHoldings(data);
-          setLoad({ kind: "ready" });
-        }
+        const summary = await getPortfolioSummary();
+        if (active) setLoad({ kind: "ready", summary });
       } catch (err) {
         if (active) setLoad({ kind: "error", message: toErrorMessage(err) });
       }
@@ -42,6 +39,8 @@ export function PortfolioView() {
     };
   }, []);
 
+  const positions = load.kind === "ready" ? load.summary.positions : [];
+
   return (
     <div className="flex flex-col gap-5">
       <Card>
@@ -49,10 +48,10 @@ export function PortfolioView() {
           <div className="flex items-baseline justify-between gap-3">
             <CardTitle>Holdings</CardTitle>
             <span className="font-mono text-xs text-faint">
-              {holdings.length} {holdings.length === 1 ? "position" : "positions"}
+              {positions.length} {positions.length === 1 ? "position" : "positions"}
             </span>
           </div>
-          <CardDescription>Your portfolio positions.</CardDescription>
+          <CardDescription>Your positions, priced with end-of-day market data.</CardDescription>
         </CardHeader>
         <CardContent>
           {load.kind === "loading" && (
@@ -66,7 +65,11 @@ export function PortfolioView() {
             </p>
           )}
           {load.kind === "ready" && (
-            <HoldingsTable holdings={holdings} onChanged={() => void refresh()} />
+            <HoldingsTable
+              positions={load.summary.positions}
+              totalValue={load.summary.total_value}
+              onChanged={() => void refresh()}
+            />
           )}
         </CardContent>
       </Card>

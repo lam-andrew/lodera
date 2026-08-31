@@ -14,8 +14,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.schemas import HoldingCreate, HoldingRead, HoldingUpdate
+from app.core.config import settings
 from app.core.database import get_session
-from app.data.symbols import is_known_symbol
+from app.data.provider import MarketDataError, MarketDataProvider
+from app.data.service import build_provider
+from app.data.symbols import is_recognized_symbol
 from app.models import Holding, Portfolio
 
 router = APIRouter(prefix="/holdings", tags=["holdings"])
@@ -24,6 +27,20 @@ router = APIRouter(prefix="/holdings", tags=["holdings"])
 SessionDep = Annotated[Session, Depends(get_session)]
 
 DEFAULT_PORTFOLIO_NAME = "Personal portfolio"
+
+
+def get_symbol_provider() -> MarketDataProvider | None:
+    """The provider used to validate tickers, or ``None`` when market data isn't configured
+    (then the bundled offline fallback applies). Overridable in tests."""
+    if not settings.market_data_configured:
+        return None
+    try:
+        return build_provider()
+    except MarketDataError:
+        return None
+
+
+ProviderDep = Annotated[MarketDataProvider | None, Depends(get_symbol_provider)]
 
 
 def _get_default_portfolio(session: Session) -> Portfolio | None:
@@ -54,13 +71,14 @@ def list_holdings(session: SessionDep) -> list[Holding]:
 
 
 @router.post("", response_model=HoldingRead, status_code=status.HTTP_201_CREATED)
-def add_holding(payload: HoldingCreate, session: SessionDep) -> Holding:
+def add_holding(payload: HoldingCreate, session: SessionDep, provider: ProviderDep) -> Holding:
     """Add a holding by ticker and share quantity.
 
     Rejects an unrecognized ticker (422) and a ticker already in the portfolio (409); the
-    quantity and ticker shape are validated by the request schema.
+    quantity and ticker shape are validated by the request schema. Recognition is checked
+    against the market-data provider when configured (US-4).
     """
-    if not is_known_symbol(payload.ticker):
+    if not is_recognized_symbol(payload.ticker, provider):
         raise HTTPException(
             status_code=422,  # Unprocessable Content (validation-style rejection)
             detail=f"Unrecognized ticker '{payload.ticker}'. Check the symbol and try again.",
