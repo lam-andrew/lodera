@@ -65,7 +65,9 @@ export function PortfolioView() {
               {load.message}
             </p>
           )}
-          {load.kind === "ready" && <HoldingsTable holdings={holdings} />}
+          {load.kind === "ready" && (
+            <HoldingsTable holdings={holdings} onChanged={() => void refresh()} />
+          )}
         </CardContent>
       </Card>
 

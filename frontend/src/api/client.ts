@@ -65,3 +65,14 @@ export async function addHolding(ticker: string, quantity: string): Promise<Hold
   const { data } = await api.post<Holding>("/holdings", { ticker, quantity });
   return data;
 }
+
+/** Update a holding's share quantity. Throws if the quantity is invalid or it's gone. */
+export async function updateHolding(id: number, quantity: string): Promise<Holding> {
+  const { data } = await api.patch<Holding>(`/holdings/${id}`, { quantity });
+  return data;
+}
+
+/** Remove a holding from the portfolio. */
+export async function deleteHolding(id: number): Promise<void> {
+  await api.delete(`/holdings/${id}`);
+}
