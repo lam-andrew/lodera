@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
 import type { PortfolioCorrelation } from "@/api/client";
@@ -21,9 +22,18 @@ const base: PortfolioCorrelation = {
   low_threshold: "0.30",
 };
 
+/** The card links to the methodology page, so it needs a router in scope. */
+function renderCard(correlation: PortfolioCorrelation) {
+  return render(
+    <MemoryRouter>
+      <CorrelationCard correlation={correlation} />
+    </MemoryRouter>,
+  );
+}
+
 describe("CorrelationCard (US-6)", () => {
   it("renders the full matrix with headers", () => {
-    render(<CorrelationCard correlation={base} />);
+    renderCard(base);
 
     const table = screen.getByRole("table");
     // Row and column header for each ticker.
@@ -37,44 +47,33 @@ describe("CorrelationCard (US-6)", () => {
   });
 
   it("surfaces the most and least correlated pairs", () => {
-    render(<CorrelationCard correlation={base} />);
+    renderCard(base);
     expect(screen.getByText(/AAPL \/ MSFT · 0\.82/)).toBeInTheDocument();
     expect(screen.getByText(/AAPL \/ BND · -0\.15/)).toBeInTheDocument();
     expect(screen.getByText("0.19")).toBeInTheDocument();
   });
 
   it("flags a pair above the high threshold as behaving like one position", () => {
-    render(<CorrelationCard correlation={base} />);
+    renderCard(base);
     expect(screen.getByText(/behaves like one position/i)).toBeInTheDocument();
   });
 
   it("does not flag pairs below the threshold", () => {
-    render(
-      <CorrelationCard
-        correlation={{
-          ...base,
-          most_correlated: [{ a: "AAPL", b: "BND", correlation: "0.20" }],
-        }}
-      />,
-    );
+    renderCard({ ...base, most_correlated: [{ a: "AAPL", b: "BND", correlation: "0.20" }] });
     expect(screen.queryByText(/behaves like one position/i)).not.toBeInTheDocument();
   });
 
   it("renders undefined cells as a dash rather than zero", () => {
-    render(
-      <CorrelationCard
-        correlation={{
-          ...base,
-          tickers: ["AAPL", "FLAT"],
-          matrix: [
-            ["1.00", null],
-            [null, "1.00"],
-          ],
-          most_correlated: [],
-          least_correlated: [],
-        }}
-      />,
-    );
+    renderCard({
+      ...base,
+      tickers: ["AAPL", "FLAT"],
+      matrix: [
+        ["1.00", null],
+        [null, "1.00"],
+      ],
+      most_correlated: [],
+      least_correlated: [],
+    });
     expect(screen.getAllByText("—").length).toBe(2);
   });
 

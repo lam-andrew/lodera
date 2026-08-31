@@ -1,5 +1,6 @@
 import type { PortfolioRisk } from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExplainLink } from "@/features/methodology/ExplainLink";
 
 import { RiskBadge } from "./RiskBadge";
 
@@ -18,8 +19,11 @@ export function RiskCard({ risk }: { risk: PortfolioRisk }) {
       <CardHeader>
         <div className="flex items-baseline justify-between gap-3">
           <CardTitle>Portfolio volatility</CardTitle>
-          <span className="font-mono text-xs text-faint">
-            {risk.observations > 0 ? `${risk.observations} trading days` : "—"}
+          <span className="flex items-baseline gap-3">
+            <span className="font-mono text-xs text-faint">
+              {risk.observations > 0 ? `${risk.observations} trading days` : "—"}
+            </span>
+            <ExplainLink anchor="portfolio-volatility" />
           </span>
         </div>
         <CardDescription>

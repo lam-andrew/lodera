@@ -1,5 +1,6 @@
 import type { PortfolioDrawdown } from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExplainLink } from "@/features/methodology/ExplainLink";
 
 function pct(value: string | null): string {
   if (value === null) return "—";
@@ -100,6 +101,7 @@ export function DrawdownCard({ data }: { data: PortfolioDrawdown }) {
       <CardHeader>
         <div className="flex items-baseline justify-between gap-3">
           <CardTitle>Drawdown</CardTitle>
+          <ExplainLink anchor="drawdown" />
           <span className="font-mono text-xs text-faint">{data.observations} trading days</span>
         </div>
         <CardDescription>
