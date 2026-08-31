@@ -101,3 +101,28 @@ export async function updateHolding(id: number, quantity: string): Promise<Holdi
 export async function deleteHolding(id: number): Promise<void> {
   await api.delete(`/holdings/${id}`);
 }
+
+/** Risk figures for one holding (US-5). Percentages come as decimal strings ("18.70"). */
+export interface HoldingRisk {
+  id: number;
+  ticker: string;
+  volatility_pct: string | null;
+  band: "low" | "moderate" | "high" | null;
+  observations: number;
+}
+
+export interface PortfolioRisk {
+  holdings: HoldingRisk[];
+  portfolio_volatility_pct: string | null;
+  portfolio_band: "low" | "moderate" | "high" | null;
+  undiversified_volatility_pct: string | null;
+  diversification_benefit_pct: string | null;
+  window_days: number;
+  observations: number;
+}
+
+/** Volatility for each holding and for the portfolio. */
+export async function getPortfolioRisk(): Promise<PortfolioRisk> {
+  const { data } = await api.get<PortfolioRisk>("/portfolio/risk");
+  return data;
+}

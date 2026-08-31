@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.data.provider import MarketDataError, MarketDataProvider, PriceBar
 from app.data.tiingo import TiingoProvider
-from app.models.prices import PriceBarRow
+from app.models.prices import PriceBarRow, PriceCoverageRow
 
 Source = Literal["cache", "provider"]
 
@@ -80,11 +80,23 @@ class MarketDataService:
         """
         return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
-    def _is_fresh(self, rows: list[PriceBarRow]) -> bool:
-        if not rows:
+    def _coverage(self, ticker: str) -> PriceCoverageRow | None:
+        return self._session.get(PriceCoverageRow, ticker)
+
+    def _is_usable(self, ticker: str, start: date, end: date) -> bool:
+        """Whether the cache can answer this request.
+
+        Two conditions, both required. **Freshness**: the data was fetched within the TTL.
+        **Coverage**: we have previously requested a window at least as wide as this one —
+        otherwise a narrow earlier fetch (say 10 days) would silently answer a 365-day
+        request with 10 days of data, quietly corrupting anything computed from it.
+        """
+        coverage = self._coverage(ticker)
+        if coverage is None:
             return False
-        newest = max(self._as_utc(row.fetched_at) for row in rows)
-        return datetime.now(UTC) - newest < self._ttl
+        if coverage.covered_start > start or coverage.covered_end < end:
+            return False
+        return datetime.now(UTC) - self._as_utc(coverage.fetched_at) < self._ttl
 
     @staticmethod
     def _to_bar(row: PriceBarRow) -> PriceBar:
@@ -108,6 +120,18 @@ class MarketDataService:
             )
         )
         now = datetime.now(UTC)
+        # Record the window we asked for, widening any window already recorded.
+        coverage = self._coverage(ticker)
+        if coverage is None:
+            self._session.add(
+                PriceCoverageRow(
+                    ticker=ticker, covered_start=start, covered_end=end, fetched_at=now
+                )
+            )
+        else:
+            coverage.covered_start = min(coverage.covered_start, start)
+            coverage.covered_end = max(coverage.covered_end, end)
+            coverage.fetched_at = now
         self._session.add_all(
             [
                 PriceBarRow(
@@ -133,9 +157,10 @@ class MarketDataService:
         rather than failing outright — analysis degrades gracefully instead of breaking.
         """
         symbol = ticker.strip().upper()
-        cached = self._cached_rows(symbol, start, end)
-        if self._is_fresh(cached):
+        if self._is_usable(symbol, start, end):
+            cached = self._cached_rows(symbol, start, end)
             return PriceSeries(symbol, [self._to_bar(r) for r in cached], "cache")
+        cached = self._cached_rows(symbol, start, end)
 
         try:
             bars = self._provider.get_daily_prices(symbol, start, end)

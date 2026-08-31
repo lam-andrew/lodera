@@ -16,6 +16,7 @@ export default {
         accent: "var(--accent)",
         "accent-foreground": "var(--accent-foreground)",
         up: "var(--up)",
+        warn: "var(--warn)",
         down: "var(--down)",
         ring: "var(--ring)",
       },

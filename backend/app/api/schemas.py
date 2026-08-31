@@ -124,3 +124,33 @@ class HoldingRead(BaseModel):
     id: int
     ticker: str
     quantity: Decimal
+
+
+class HoldingRiskRead(BaseModel):
+    """Risk figures for a single holding (US-5).
+
+    ``volatility_pct`` is annualized, expressed as a percentage (18.70 == 18.7%). It is
+    ``None`` when there is too little price history to estimate it meaningfully.
+    """
+
+    id: int
+    ticker: str
+    volatility_pct: Decimal | None = None
+    band: Literal["low", "moderate", "high"] | None = None
+    #: Number of daily returns the estimate is based on.
+    observations: int
+
+
+class PortfolioRiskRead(BaseModel):
+    """Portfolio-level risk (US-5), with the per-holding breakdown."""
+
+    holdings: list[HoldingRiskRead]
+    portfolio_volatility_pct: Decimal | None = None
+    portfolio_band: Literal["low", "moderate", "high"] | None = None
+    #: Weighted average of standalone volatilities — what the portfolio would be if its
+    #: holdings moved together perfectly. The gap to the actual figure is diversification.
+    undiversified_volatility_pct: Decimal | None = None
+    diversification_benefit_pct: Decimal | None = None
+    window_days: int
+    #: Daily returns shared by all priced holdings, backing the portfolio figure.
+    observations: int

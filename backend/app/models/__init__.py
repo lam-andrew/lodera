@@ -3,6 +3,6 @@ Alembic autogeneration and ``create_all`` (tests) can see them.
 """
 
 from app.models.portfolio import Holding, Portfolio
-from app.models.prices import PriceBarRow
+from app.models.prices import PriceBarRow, PriceCoverageRow
 
-__all__ = ["Holding", "Portfolio", "PriceBarRow"]
+__all__ = ["Holding", "Portfolio", "PriceBarRow", "PriceCoverageRow"]

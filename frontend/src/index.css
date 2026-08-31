@@ -16,6 +16,7 @@
     --accent: #2a78d6;
     --accent-foreground: #ffffff;
     --up: #0f8a3c;
+    --warn: #b9791a;
     --down: #d03b3b;
     --ring: #2a78d6;
     --radius: 0.75rem;
@@ -32,6 +33,7 @@
     --accent: #4a93f0;
     --accent-foreground: #06101f;
     --up: #3ec38a;
+    --warn: #e0a13a;
     --down: #f0655f;
     --ring: #4a93f0;
   }
