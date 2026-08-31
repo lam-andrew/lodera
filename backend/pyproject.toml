@@ -10,6 +10,7 @@ dependencies = [
     "psycopg[binary]>=3.2,<4.0",
     "pydantic>=2.8,<3.0",
     "pydantic-settings>=2.4,<3.0",
+    "alembic>=1.13,<2.0",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +37,8 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Alembic-managed files follow their own generated style.
+extend-exclude = ["alembic"]
 
 [tool.ruff.lint]
 # A pragmatic, non-noisy rule set: pyflakes/pycodestyle errors, import sorting,
