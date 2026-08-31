@@ -31,3 +31,4 @@ capture an architecturally significant decision, its context, and its consequenc
 | [0008](0008-defer-continuous-deployment.md) | Defer Continuous Deployment until a host is selected | Accepted |
 | [0009](0009-ui-styling-tailwind-shadcn-tremor.md) | UI styling: Tailwind + shadcn/ui + Tremor | Accepted |
 | [0010](0010-alembic-migrations.md) | Database schema migrations with Alembic | Accepted |
+| [0011](0011-market-data-provider.md) | Market data via Tiingo, behind a provider interface | Accepted |

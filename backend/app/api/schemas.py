@@ -25,6 +25,9 @@ class HealthResponse(BaseModel):
     version: str
     environment: str
     database: Literal["connected", "unavailable"]
+    # Whether a market-data API key is configured (US-4). "unconfigured" is a valid state:
+    # the app runs without it, but price-backed risk analysis needs it.
+    market_data: Literal["configured", "unconfigured"]
 
 
 class HoldingCreate(BaseModel):

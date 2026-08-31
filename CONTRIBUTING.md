@@ -25,6 +25,21 @@ cp .env.example .env        # then fill in values
 docker compose up --build
 ```
 
+### Market-data API key (needed for US-4 onward)
+
+Risk analysis runs on real historical prices from **Tiingo**
+(see [ADR 0011](docs/adr/0011-market-data-provider.md)). To enable it:
+
+1. Create a free account at <https://www.tiingo.com>.
+2. Copy your token from the **API → Token** page.
+3. Put it in your local `.env` (git-ignored):
+   `APP_MARKET_DATA_API_KEY=your_token_here`
+4. Restart the backend: `docker compose up -d --build backend`.
+
+The free tier allows 50 requests/hour and 1000/day, which is ample because prices are
+cached locally (FR-6). The stack **boots fine without a key** — only the market-data and
+risk features need it, and `/health` reports whether it is configured.
+
 Once up:
 
 - Backend API + docs: `http://localhost:8000` (Swagger UI at `/docs`)

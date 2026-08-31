@@ -39,6 +39,20 @@ class Settings(BaseSettings):
     # CORS: origins allowed to call the API (the frontend dev server by default).
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Market data (US-4; see docs/adr/0011-market-data-provider.md). The provider is
+    # selected by name and reached behind the MarketDataProvider interface, so swapping
+    # providers is a config change. The key is secret — set it in .env, never commit it.
+    market_data_provider: str = "tiingo"
+    market_data_api_key: str = ""
+    # How long cached daily prices stay fresh before we re-fetch (FR-6).
+    market_data_cache_ttl_hours: int = 24
+
+    @property
+    def market_data_configured(self) -> bool:
+        """Whether a market-data API key is present. Lets the app boot (and /health report)
+        without a key, instead of crashing, so the stack runs before US-4 is configured."""
+        return bool(self.market_data_api_key.strip())
+
 
 settings = Settings()
 """Process-wide settings singleton. Import this rather than instantiating ``Settings``."""

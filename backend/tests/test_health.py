@@ -40,3 +40,16 @@ def test_health_reports_db_unavailable_without_failing(
 
     assert response.status_code == 200
     assert response.json()["database"] == "unavailable"
+
+
+def test_health_reports_market_data_configuration(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The key is optional: /health reports whether market data (US-4) is configured."""
+    monkeypatch.setattr("app.api.routes.check_database", lambda: True)
+
+    monkeypatch.setattr("app.api.routes.settings.market_data_api_key", "")
+    assert client.get("/health").json()["market_data"] == "unconfigured"
+
+    monkeypatch.setattr("app.api.routes.settings.market_data_api_key", "a-test-token")
+    assert client.get("/health").json()["market_data"] == "configured"
