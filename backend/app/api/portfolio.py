@@ -7,7 +7,7 @@ meet; risk metrics land here as their stories arrive (US-5 onward).
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
 
@@ -118,28 +118,11 @@ def get_history(
     how *this* portfolio would have moved — it is not a record of past trading activity.
     """
     data = load_portfolio_series(session, service, days=days)
-
-    if not data.priced_tickers:
-        return PortfolioHistoryRead(points=[], start=None, end=None)
-
-    quantities = {h.ticker: h.quantity for h in data.holdings}
-
-    # Only dates every priced holding shares, so the total is never a partial sum.
-    common: set[date] | None = None
-    for ticker in data.priced_tickers:
-        dates = set(data.prices[ticker])
-        common = dates if common is None else (common & dates)
+    dates, values = data.value_series()
 
     points = [
-        PortfolioValuePointRead(
-            date=day,
-            # Decimal start value: sum() returns int 0 on an empty iterable.
-            value=sum(
-                (data.prices[t][day] * quantities[t] for t in data.priced_tickers),
-                Decimal("0"),
-            ).quantize(Decimal("0.01")),
-        )
-        for day in sorted(common or set())
+        PortfolioValuePointRead(date=day, value=value.quantize(Decimal("0.01")))
+        for day, value in zip(dates, values, strict=True)
     ]
 
     return PortfolioHistoryRead(

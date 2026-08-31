@@ -5,7 +5,9 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { StatTile } from "@/components/ui/stat-tile";
 import { formatCurrency } from "@/features/holdings/format";
 import { HoldingsTable } from "@/features/holdings/HoldingsTable";
+import { ConcentrationCard } from "@/features/risk/ConcentrationCard";
 import { CorrelationCard } from "@/features/risk/CorrelationCard";
+import { DrawdownCard } from "@/features/risk/DrawdownCard";
 import { RiskBadge } from "@/features/risk/RiskBadge";
 import { riskByTicker, type PortfolioData } from "@/hooks/usePortfolio";
 
@@ -22,7 +24,7 @@ interface DashboardPageProps {
 
 /** Risk overview (US-10): summary tiles first, then the supporting detail. */
 export function DashboardPage({ data, onChanged }: DashboardPageProps) {
-  const { summary, risk, correlation, history } = data;
+  const { summary, risk, correlation, history, concentration, drawdown } = data;
 
   if (summary.positions.length === 0) {
     return (
@@ -54,7 +56,7 @@ export function DashboardPage({ data, onChanged }: DashboardPageProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         <StatTile
           label="Portfolio value"
           value={formatCurrency(summary.total_value)}
@@ -101,12 +103,27 @@ export function DashboardPage({ data, onChanged }: DashboardPageProps) {
         />
 
         <StatTile
-          label="Largest position"
-          value={topWeight?.ticker ?? "—"}
+          label="Effective holdings"
+          value={
+            concentration?.effective_holdings !== null &&
+            concentration?.effective_holdings !== undefined
+              ? Number(concentration.effective_holdings).toFixed(1)
+              : "—"
+          }
           detail={
-            topWeight !== undefined
-              ? `${pct(topWeight.weight_pct)} of portfolio · ${formatCurrency(topWeight.market_value)}`
-              : undefined
+            concentration !== null
+              ? `from ${concentration.holdings_count} positions${topWeight !== undefined ? ` · ${topWeight.ticker} is ${pct(topWeight.weight_pct)}` : ""}`
+              : "Concentration"
+          }
+        />
+
+        <StatTile
+          label="Worst decline"
+          value={pct(drawdown?.max_drawdown_pct)}
+          detail={
+            drawdown?.current_drawdown_pct != null && Number(drawdown.current_drawdown_pct) < -0.05
+              ? `currently ${pct(drawdown.current_drawdown_pct)} below peak`
+              : "recovered to peak"
           }
         />
       </section>
@@ -147,6 +164,11 @@ export function DashboardPage({ data, onChanged }: DashboardPageProps) {
             </CardHeader>
           </Card>
         )}
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        {concentration !== null && <ConcentrationCard data={concentration} />}
+        {drawdown !== null && <DrawdownCard data={drawdown} />}
       </section>
     </div>
   );

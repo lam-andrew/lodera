@@ -39,8 +39,8 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Risk & Exposure",
     items: [
       { label: "Correlation", to: "/correlation", icon: icon("M3 3v18h18M3 15h18M9 3v18M15 3v18") },
-      { label: "Concentration", soon: true, icon: icon("M12 3a9 9 0 1 0 9 9h-9V3Z") },
-      { label: "Drawdown", soon: true, icon: icon("M3 7l5 6 4-3 4 5 5-9") },
+      { label: "Concentration", to: "/concentration", icon: icon("M12 3a9 9 0 1 0 9 9h-9V3Z") },
+      { label: "Drawdown", to: "/drawdown", icon: icon("M3 7l5 6 4-3 4 5 5-9") },
     ],
   },
   {

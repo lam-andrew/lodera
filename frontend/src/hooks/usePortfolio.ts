@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  getPortfolioConcentration,
   getPortfolioCorrelation,
+  getPortfolioDrawdown,
   getPortfolioHistory,
   getPortfolioRisk,
   getPortfolioSummary,
   toErrorMessage,
   type HoldingRisk,
+  type PortfolioConcentration,
   type PortfolioCorrelation,
+  type PortfolioDrawdown,
   type PortfolioHistory,
   type PortfolioRisk,
   type PortfolioSummary,
@@ -18,6 +22,8 @@ export interface PortfolioData {
   risk: PortfolioRisk | null;
   correlation: PortfolioCorrelation | null;
   history: PortfolioHistory | null;
+  concentration: PortfolioConcentration | null;
+  drawdown: PortfolioDrawdown | null;
 }
 
 export type PortfolioState =
@@ -28,13 +34,15 @@ export type PortfolioState =
  *  Only the summary is required: the analytical calls are allowed to fail individually so a
  *  hiccup in one metric never hides the portfolio the user came to see. */
 async function loadAll(): Promise<PortfolioData> {
-  const [summary, risk, correlation, history] = await Promise.all([
+  const [summary, risk, correlation, history, concentration, drawdown] = await Promise.all([
     getPortfolioSummary(),
     getPortfolioRisk().catch(() => null),
     getPortfolioCorrelation().catch(() => null),
     getPortfolioHistory().catch(() => null),
+    getPortfolioConcentration().catch(() => null),
+    getPortfolioDrawdown().catch(() => null),
   ]);
-  return { summary, risk, correlation, history };
+  return { summary, risk, correlation, history, concentration, drawdown };
 }
 
 /** Shared portfolio data for every page, with a refresh callback for mutations. */

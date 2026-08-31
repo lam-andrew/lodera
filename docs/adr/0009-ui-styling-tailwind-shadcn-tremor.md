@@ -1,6 +1,6 @@
 # 0009. UI styling: Tailwind + shadcn/ui + Tremor
 
-- **Status:** Accepted
+- **Status:** Accepted — the charting choice (Tremor) is **superseded by [0013](0013-hand-authored-charts.md)**; Tailwind and shadcn/ui remain in force
 - **Date:** 2026-08-28
 
 ## Context
