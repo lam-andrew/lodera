@@ -6,11 +6,12 @@ the auto-generated OpenAPI documentation.
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 # Basic ticker shape (e.g. AAPL, BRK.B). Recognition against real symbols is a separate,
 # domain-level check performed in the route (see app.data.symbols).
@@ -43,6 +44,69 @@ class HoldingCreate(BaseModel):
         if not _TICKER_RE.match(normalized):
             raise ValueError("Ticker must be 1-6 letters, optionally like 'BRK.B'.")
         return normalized
+
+
+#: Prices serialize at a fixed scale so a response looks identical whether it came straight
+#: from the provider or from the cache (the DB column is Numeric(18, 6), which round-trips
+#: Decimal("100") as Decimal("100.000000")). Without this, the same request would return
+#: "100" on a cache miss and "100.000000" on a hit.
+_PRICE_SCALE = Decimal("0.000001")
+
+
+class PriceBarRead(BaseModel):
+    """One daily bar as returned by the API."""
+
+    date: dt.date
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    adj_close: Decimal
+    volume: int
+
+    @field_serializer("open", "high", "low", "close", "adj_close")
+    def _serialize_price(self, value: Decimal) -> Decimal:
+        return value.quantize(_PRICE_SCALE)
+
+
+class PriceSeriesRead(BaseModel):
+    """Daily prices for one symbol (US-4).
+
+    ``source`` reports whether this response came from the local cache or a live provider
+    call, which makes the caching behaviour (FR-6) visible to clients and tests.
+    """
+
+    ticker: str
+    source: Literal["cache", "provider"]
+    count: int
+    start: dt.date | None
+    end: dt.date | None
+    bars: list[PriceBarRead]
+
+
+class PositionRead(BaseModel):
+    """A holding enriched with market data (US-1/US-3 + US-4).
+
+    Price fields are nullable: a position is still reported when its price cannot be
+    retrieved, so one bad symbol never hides the rest of the portfolio.
+    """
+
+    id: int
+    ticker: str
+    quantity: Decimal
+    latest_price: Decimal | None = None
+    market_value: Decimal | None = None
+    weight_pct: Decimal | None = None
+    price_as_of: dt.date | None = None
+
+
+class PortfolioSummaryRead(BaseModel):
+    """Portfolio positions with market values and the total."""
+
+    positions: list[PositionRead]
+    total_value: Decimal | None = None
+    #: False when no position could be priced (e.g. market data unconfigured or offline).
+    priced: bool
 
 
 class HoldingUpdate(BaseModel):

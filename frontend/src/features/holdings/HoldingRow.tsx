@@ -1,31 +1,27 @@
 import { useState } from "react";
 
-import { deleteHolding, toErrorMessage, updateHolding, type Holding } from "@/api/client";
+import { deleteHolding, toErrorMessage, updateHolding, type Position } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+import { formatCurrency, formatPercent, formatShares } from "./format";
 
 /** What the row is currently doing. Delete requires an explicit confirm step (US-3). */
 type RowMode = "view" | "editing" | "confirmDelete";
 
-function formatShares(quantity: string): string {
-  const value = Number(quantity);
-  if (Number.isNaN(value)) return quantity;
-  return value.toLocaleString(undefined, { maximumFractionDigits: 6 });
-}
-
 interface HoldingRowProps {
-  holding: Holding;
+  position: Position;
   onChanged: () => void;
 }
 
-export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
+export function HoldingRow({ position, onChanged }: HoldingRowProps) {
   const [mode, setMode] = useState<RowMode>("view");
-  const [draft, setDraft] = useState(holding.quantity);
+  const [draft, setDraft] = useState(position.quantity);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   function startEditing() {
-    setDraft(String(Number(holding.quantity)));
+    setDraft(String(Number(position.quantity)));
     setError(null);
     setMode("editing");
   }
@@ -39,7 +35,7 @@ export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
     setBusy(true);
     setError(null);
     try {
-      await updateHolding(holding.id, draft.trim());
+      await updateHolding(position.id, draft.trim());
       setMode("view");
       onChanged();
     } catch (err) {
@@ -53,7 +49,7 @@ export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
     setBusy(true);
     setError(null);
     try {
-      await deleteHolding(holding.id);
+      await deleteHolding(position.id);
       onChanged();
     } catch (err) {
       setError(toErrorMessage(err));
@@ -65,25 +61,37 @@ export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
   return (
     <>
       <tr className="border-b border-border/60 last:border-0">
-        <td className="px-2 py-3 font-medium text-foreground">{holding.ticker}</td>
+        <td className="px-2 py-3 font-medium text-foreground">{position.ticker}</td>
+
         <td className="px-2 py-3 text-right">
           {mode === "editing" ? (
             <Input
-              aria-label={`Shares of ${holding.ticker}`}
+              aria-label={`Shares of ${position.ticker}`}
               type="number"
               min="0"
               step="any"
               autoFocus
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              className="ml-auto h-8 w-28 text-right font-mono tabular-nums"
+              className="ml-auto h-8 w-24 text-right font-mono tabular-nums"
             />
           ) : (
             <span className="font-mono tabular-nums text-foreground">
-              {formatShares(holding.quantity)}
+              {formatShares(position.quantity)}
             </span>
           )}
         </td>
+
+        <td className="px-2 py-3 text-right font-mono tabular-nums text-muted-foreground">
+          {formatCurrency(position.latest_price)}
+        </td>
+        <td className="px-2 py-3 text-right font-mono tabular-nums text-foreground">
+          {formatCurrency(position.market_value)}
+        </td>
+        <td className="px-2 py-3 text-right font-mono tabular-nums text-muted-foreground">
+          {formatPercent(position.weight_pct)}
+        </td>
+
         <td className="px-2 py-3">
           <div className="flex items-center justify-end gap-1.5">
             {mode === "view" && (
@@ -92,7 +100,7 @@ export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
                   variant="ghost"
                   size="sm"
                   onClick={startEditing}
-                  aria-label={`Edit ${holding.ticker}`}
+                  aria-label={`Edit ${position.ticker}`}
                 >
                   Edit
                 </Button>
@@ -100,7 +108,7 @@ export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => setMode("confirmDelete")}
-                  aria-label={`Delete ${holding.ticker}`}
+                  aria-label={`Delete ${position.ticker}`}
                   className="text-down hover:bg-down/10"
                 >
                   Delete
@@ -125,12 +133,14 @@ export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
 
             {mode === "confirmDelete" && (
               <>
-                <span className="mr-1 text-xs text-muted-foreground">Remove {holding.ticker}?</span>
+                <span className="mr-1 whitespace-nowrap text-xs text-muted-foreground">
+                  Remove {position.ticker}?
+                </span>
                 <Button
                   size="sm"
                   onClick={() => void confirmDelete()}
                   disabled={busy}
-                  aria-label={`Confirm delete ${holding.ticker}`}
+                  aria-label={`Confirm delete ${position.ticker}`}
                   className="bg-down text-white hover:opacity-90"
                 >
                   {busy ? "Removing…" : "Confirm"}
@@ -146,7 +156,7 @@ export function HoldingRow({ holding, onChanged }: HoldingRowProps) {
 
       {error != null && (
         <tr>
-          <td colSpan={3} className="px-2 pb-3 text-right text-sm text-down" role="alert">
+          <td colSpan={6} className="px-2 pb-3 text-right text-sm text-down" role="alert">
             {error}
           </td>
         </tr>

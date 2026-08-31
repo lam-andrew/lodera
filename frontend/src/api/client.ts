@@ -68,6 +68,29 @@ export async function addHolding(ticker: string, quantity: string): Promise<Hold
   return data;
 }
 
+/** A holding enriched with market data (US-4). Price fields are null when unavailable. */
+export interface Position {
+  id: number;
+  ticker: string;
+  quantity: string;
+  latest_price: string | null;
+  market_value: string | null;
+  weight_pct: string | null;
+  price_as_of: string | null;
+}
+
+export interface PortfolioSummary {
+  positions: Position[];
+  total_value: string | null;
+  priced: boolean;
+}
+
+/** Holdings joined with latest prices and market values. */
+export async function getPortfolioSummary(): Promise<PortfolioSummary> {
+  const { data } = await api.get<PortfolioSummary>("/portfolio/summary");
+  return data;
+}
+
 /** Update a holding's share quantity. Throws if the quantity is invalid or it's gone. */
 export async function updateHolding(id: number, quantity: string): Promise<Holding> {
   const { data } = await api.patch<Holding>(`/holdings/${id}`, { quantity });

@@ -10,13 +10,15 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app import __version__
-from app.api import holdings
+from app.api import holdings, market_data, portfolio
 from app.api.schemas import HealthResponse
 from app.core.config import settings
 from app.core.database import check_database
 
 api_router = APIRouter()
 api_router.include_router(holdings.router)
+api_router.include_router(market_data.router)
+api_router.include_router(portfolio.router)
 
 
 @api_router.get("/health", response_model=HealthResponse, tags=["system"])

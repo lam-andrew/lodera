@@ -6,13 +6,21 @@ import * as client from "@/api/client";
 
 import { HoldingRow } from "./HoldingRow";
 
-const holding = { id: 7, ticker: "AAPL", quantity: "10.000000" };
+const position = {
+  id: 7,
+  ticker: "AAPL",
+  quantity: "10.000000",
+  latest_price: "150.00",
+  market_value: "1500.00",
+  weight_pct: "100.00",
+  price_as_of: "2026-08-28",
+};
 
 function renderRow(onChanged = vi.fn()) {
   render(
     <table>
       <tbody>
-        <HoldingRow holding={holding} onChanged={onChanged} />
+        <HoldingRow position={position} onChanged={onChanged} />
       </tbody>
     </table>,
   );
@@ -27,7 +35,7 @@ describe("HoldingRow (US-3)", () => {
   it("saves an edited quantity", async () => {
     const update = vi
       .spyOn(client, "updateHolding")
-      .mockResolvedValue({ ...holding, quantity: "12.5" });
+      .mockResolvedValue({ id: 7, ticker: "AAPL", quantity: "12.5" });
     const onChanged = renderRow();
 
     fireEvent.click(screen.getByRole("button", { name: /edit aapl/i }));

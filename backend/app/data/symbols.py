@@ -1,12 +1,15 @@
 """Ticker symbol validation.
 
-**Stopgap for US-1.** US-1's acceptance criteria require rejecting an unrecognized ticker,
-but real symbol validation needs market data (US-4). Until then, "recognized" means "in this
-bundled set of common US stocks and ETFs." US-4 replaces :func:`is_known_symbol` with a
-market-data lookup (plus local caching), leaving the rest of the app unchanged.
+As of US-4, recognition is delegated to the configured market-data provider
+(:func:`is_recognized_symbol`), so any symbol the provider knows is accepted. The bundled
+:data:`_KNOWN_SYMBOLS` set remains as an **offline fallback** for when no API key is
+configured or the provider is unreachable, so adding a holding keeps working (and the test
+suite needs no network).
 """
 
 from __future__ import annotations
+
+from app.data.provider import MarketDataError, MarketDataProvider
 
 # A pragmatic set of common US equities and ETFs so demos work; not exhaustive by design.
 _KNOWN_SYMBOLS: frozenset[str] = frozenset(
@@ -111,5 +114,20 @@ def normalize_symbol(ticker: str) -> str:
 
 
 def is_known_symbol(ticker: str) -> bool:
-    """Return whether ``ticker`` is a recognized symbol (see module note)."""
+    """Offline fallback: is ``ticker`` in the bundled set of common symbols?"""
     return normalize_symbol(ticker) in _KNOWN_SYMBOLS
+
+
+def is_recognized_symbol(ticker: str, provider: MarketDataProvider | None) -> bool:
+    """Return whether ``ticker`` is a real symbol.
+
+    Asks the market-data provider when one is available; falls back to the bundled set when
+    market data is unconfigured or the provider call fails, so a provider outage degrades
+    the check rather than blocking the user entirely.
+    """
+    if provider is None:
+        return is_known_symbol(ticker)
+    try:
+        return provider.symbol_exists(normalize_symbol(ticker))
+    except MarketDataError:
+        return is_known_symbol(ticker)
