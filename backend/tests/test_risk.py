@@ -104,3 +104,88 @@ def test_volatility_is_reported_as_a_percentage(client: TestClient) -> None:
     _add(client, "AAPL", "10")
     vol = Decimal(client.get("/portfolio/risk").json()["holdings"][0]["volatility_pct"])
     assert Decimal("5") < vol < Decimal("60")
+
+
+# --- US-6: correlation ---------------------------------------------------------
+
+
+def test_correlation_returns_a_symmetric_matrix_for_the_holdings(client: TestClient) -> None:
+    """US-6 acceptance: with 2+ priced holdings, the correlation structure is displayed."""
+    _add(client, "AAPL", "10")
+    _add(client, "MSFT", "5")
+    _add(client, "VTI", "8")
+
+    body = client.get("/portfolio/correlation").json()
+
+    assert body["tickers"] == ["AAPL", "MSFT", "VTI"]
+    matrix = body["matrix"]
+    assert len(matrix) == 3 and all(len(row) == 3 for row in matrix)
+
+    for i in range(3):
+        assert Decimal(matrix[i][i]) == Decimal("1.00")  # diagonal
+        for j in range(3):
+            assert matrix[i][j] == matrix[j][i]  # symmetric
+            assert Decimal("-1") <= Decimal(matrix[i][j]) <= Decimal("1")
+
+    assert body["observations"] > 0
+    assert body["average_correlation"] is not None
+
+
+def test_correlation_surfaces_most_and_least_correlated_pairs(client: TestClient) -> None:
+    _add(client, "AAPL", "10")
+    _add(client, "MSFT", "5")
+    _add(client, "NVDA", "3")
+
+    body = client.get("/portfolio/correlation").json()
+
+    # 3 holdings -> 3 distinct pairs, never self-pairs or duplicates.
+    assert len(body["most_correlated"]) == 3
+    for pair in body["most_correlated"]:
+        assert pair["a"] != pair["b"]
+
+    top = [Decimal(p["correlation"]) for p in body["most_correlated"]]
+    assert top == sorted(top, reverse=True)
+
+    bottom = [Decimal(p["correlation"]) for p in body["least_correlated"]]
+    assert bottom == sorted(bottom)
+
+
+def test_correlation_needs_two_holdings(client: TestClient) -> None:
+    _add(client, "AAPL", "10")
+    body = client.get("/portfolio/correlation").json()
+    assert body["tickers"] == []
+    assert body["matrix"] == []
+    assert body["average_correlation"] is None
+
+
+def test_correlation_of_an_empty_portfolio_does_not_fail(client: TestClient) -> None:
+    body = client.get("/portfolio/correlation").json()
+    assert body["tickers"] == []
+    assert body["matrix"] == []
+
+
+def test_correlation_excludes_unpriceable_holdings(
+    client: TestClient, provider: FakeProvider
+) -> None:
+    _add(client, "AAPL", "10")
+    _add(client, "MSFT", "5")
+    _add(client, "NVDA", "3")
+    provider.known = {"AAPL", "MSFT"}
+
+    body = client.get("/portfolio/correlation").json()
+    assert body["tickers"] == ["AAPL", "MSFT"]
+    assert len(body["matrix"]) == 2
+
+
+def test_correlation_window_is_validated(client: TestClient) -> None:
+    _add(client, "AAPL", "10")
+    _add(client, "MSFT", "5")
+    assert client.get("/portfolio/correlation?days=180").json()["window_days"] == 180
+    assert client.get("/portfolio/correlation?days=10").status_code == 422
+
+
+def test_correlation_thresholds_are_exposed(client: TestClient) -> None:
+    """Client and server must agree on what counts as 'high', so the server states it."""
+    body = client.get("/portfolio/correlation").json()
+    assert Decimal(body["high_threshold"]) == Decimal("0.75")
+    assert Decimal(body["low_threshold"]) == Decimal("0.30")

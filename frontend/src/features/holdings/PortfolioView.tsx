@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  getPortfolioCorrelation,
   getPortfolioRisk,
   getPortfolioSummary,
   toErrorMessage,
   type HoldingRisk,
+  type PortfolioCorrelation,
   type PortfolioRisk,
   type PortfolioSummary,
 } from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImportCard } from "@/features/import/ImportCard";
+import { CorrelationCard } from "@/features/risk/CorrelationCard";
 import { RiskCard } from "@/features/risk/RiskCard";
 
 import { AddHoldingForm } from "./AddHoldingForm";
@@ -17,19 +20,29 @@ import { HoldingsTable } from "./HoldingsTable";
 
 type LoadState =
   | { kind: "loading" }
-  | { kind: "ready"; summary: PortfolioSummary; risk: PortfolioRisk | null }
+  | {
+      kind: "ready";
+      summary: PortfolioSummary;
+      risk: PortfolioRisk | null;
+      correlation: PortfolioCorrelation | null;
+    }
   | { kind: "error"; message: string };
 
 /** Loads holdings, prices, and risk together.
  *
  *  Risk is loaded alongside but is allowed to fail on its own: a volatility hiccup should
  *  never hide the holdings the user came to see. */
-async function loadAll(): Promise<{ summary: PortfolioSummary; risk: PortfolioRisk | null }> {
-  const [summary, risk] = await Promise.all([
+async function loadAll(): Promise<{
+  summary: PortfolioSummary;
+  risk: PortfolioRisk | null;
+  correlation: PortfolioCorrelation | null;
+}> {
+  const [summary, risk, correlation] = await Promise.all([
     getPortfolioSummary(),
     getPortfolioRisk().catch(() => null),
+    getPortfolioCorrelation().catch(() => null),
   ]);
-  return { summary, risk };
+  return { summary, risk, correlation };
 }
 
 function indexRisk(risk: PortfolioRisk | null): Record<string, HoldingRisk> {
@@ -43,8 +56,8 @@ export function PortfolioView() {
 
   const refresh = useCallback(async () => {
     try {
-      const { summary, risk } = await loadAll();
-      setLoad({ kind: "ready", summary, risk });
+      const { summary, risk, correlation } = await loadAll();
+      setLoad({ kind: "ready", summary, risk, correlation });
     } catch (err) {
       setLoad({ kind: "error", message: toErrorMessage(err) });
     }
@@ -55,8 +68,8 @@ export function PortfolioView() {
     let active = true;
     void (async () => {
       try {
-        const { summary, risk } = await loadAll();
-        if (active) setLoad({ kind: "ready", summary, risk });
+        const { summary, risk, correlation } = await loadAll();
+        if (active) setLoad({ kind: "ready", summary, risk, correlation });
       } catch (err) {
         if (active) setLoad({ kind: "error", message: toErrorMessage(err) });
       }
@@ -115,6 +128,10 @@ export function PortfolioView() {
           <AddHoldingForm onAdded={() => void refresh()} />
         </CardContent>
       </Card>
+
+      {load.kind === "ready" && load.correlation !== null && positions.length > 1 && (
+        <CorrelationCard correlation={load.correlation} />
+      )}
 
       <ImportCard onImported={() => void refresh()} />
     </div>

@@ -5,6 +5,15 @@ app. They take plain sequences and return plain numbers, so the math can be unit
 isolation and callers reach it only through the API layer (ADR 0004).
 """
 
+from app.engines.risk.correlation import (
+    HIGH_CORRELATION,
+    LOW_CORRELATION,
+    Pair,
+    average_correlation,
+    correlation_matrix,
+    least_correlated,
+    most_correlated,
+)
 from app.engines.risk.volatility import (
     TRADING_DAYS_PER_YEAR,
     annualized_volatility,
@@ -14,9 +23,16 @@ from app.engines.risk.volatility import (
 )
 
 __all__ = [
+    "HIGH_CORRELATION",
+    "LOW_CORRELATION",
     "TRADING_DAYS_PER_YEAR",
+    "Pair",
     "annualized_volatility",
+    "average_correlation",
+    "correlation_matrix",
     "daily_returns",
+    "least_correlated",
+    "most_correlated",
     "portfolio_volatility",
     "volatility_band",
 ]
