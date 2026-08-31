@@ -41,3 +41,24 @@ class PriceBarRow(Base):
     fetched_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class PriceCoverageRow(Base):
+    """What date range we have actually requested for a symbol.
+
+    The bars themselves are not enough to judge cache completeness: a 10-day fetch leaves
+    10 days of bars, and a later 365-day request would otherwise be answered from that
+    narrow slice and silently report a full year of data. Recording the *requested* window
+    (rather than inferring it from the bars) also avoids re-fetching forever for symbols
+    whose history legitimately starts after the requested start, or when the most recent
+    day has no bar yet because the market has not closed.
+    """
+
+    __tablename__ = "price_coverage"
+
+    ticker: Mapped[str] = mapped_column(String(12), primary_key=True)
+    covered_start: Mapped[date] = mapped_column(Date, nullable=False)
+    covered_end: Mapped[date] = mapped_column(Date, nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

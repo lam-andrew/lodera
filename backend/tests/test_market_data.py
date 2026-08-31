@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base
 from app.data.provider import MarketDataError, PriceBar, UnknownSymbolError
 from app.data.service import MarketDataService
-from app.models.prices import PriceBarRow
+from app.models.prices import PriceBarRow, PriceCoverageRow
 from tests.fakes import FakeProvider
 
 # --- API level ---------------------------------------------------------------
@@ -76,6 +76,16 @@ def session_factory():  # type: ignore[no-untyped-def]
     engine.dispose()
 
 
+def _age_cache(session, *, hours: int) -> None:  # type: ignore[no-untyped-def]
+    """Push the cache past its TTL by backdating both bars and coverage."""
+    stale = datetime.now(UTC) - timedelta(hours=hours)
+    for row in session.query(PriceBarRow).all():
+        row.fetched_at = stale
+    for row in session.query(PriceCoverageRow).all():
+        row.fetched_at = stale
+    session.commit()
+
+
 def test_stale_cache_triggers_a_refetch(session_factory) -> None:  # type: ignore[no-untyped-def]
     session = session_factory()
     provider = FakeProvider()
@@ -86,10 +96,8 @@ def test_stale_cache_triggers_a_refetch(session_factory) -> None:  # type: ignor
     assert service.get_daily_prices("AAPL", start, end).source == "provider"
     assert service.get_daily_prices("AAPL", start, end).source == "cache"
 
-    # Age every cached row past the TTL.
-    for row in session.query(PriceBarRow).all():
-        row.fetched_at = datetime.now(UTC) - timedelta(hours=48)
-    session.commit()
+    # Age the cache past the TTL (freshness is tracked on the coverage row).
+    _age_cache(session, hours=48)
 
     assert service.get_daily_prices("AAPL", start, end).source == "provider"
     assert provider.price_calls == 2
@@ -106,9 +114,7 @@ def test_stale_cache_is_served_when_the_provider_fails(session_factory) -> None:
     fresh = service.get_daily_prices("AAPL", start, end)
     assert fresh.source == "provider"
 
-    for row in session.query(PriceBarRow).all():
-        row.fetched_at = datetime.now(UTC) - timedelta(hours=48)
-    session.commit()
+    _age_cache(session, hours=48)
 
     class BrokenProvider(FakeProvider):
         def get_daily_prices(self, ticker: str, start: date, end: date) -> list[PriceBar]:
@@ -187,3 +193,29 @@ def test_summary_still_lists_a_position_when_pricing_fails(
     assert by_ticker["AAPL"]["market_value"] is not None
     assert by_ticker["MSFT"]["market_value"] is None
     assert body["priced"] is True
+
+
+def test_a_narrow_cached_window_does_not_answer_a_wider_request(session_factory) -> None:  # type: ignore[no-untyped-def]
+    """Regression: a 10-day fetch must not silently answer a 365-day request.
+
+    Without coverage tracking the wider call returned only the 10 cached days while
+    reporting source="cache", which quietly starved anything computed from it (risk
+    metrics saw ~5 observations instead of a year).
+    """
+    session = session_factory()
+    provider = FakeProvider()
+    service = MarketDataService(session, provider, ttl_hours=24)
+    end = date(2026, 8, 30)
+
+    narrow = service.get_daily_prices("AAPL", end - timedelta(days=10), end)
+    assert narrow.source == "provider"
+
+    wide = service.get_daily_prices("AAPL", end - timedelta(days=365), end)
+    assert wide.source == "provider", "wider window must re-fetch, not reuse the narrow cache"
+    assert len(wide.bars) > len(narrow.bars) * 5
+    assert provider.price_calls == 2
+
+    # Now the wide window is cached, and a narrower request inside it is a hit.
+    inner = service.get_daily_prices("AAPL", end - timedelta(days=30), end)
+    assert inner.source == "cache"
+    assert provider.price_calls == 2

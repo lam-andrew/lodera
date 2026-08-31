@@ -1,8 +1,16 @@
 import { useState } from "react";
 
-import { deleteHolding, toErrorMessage, updateHolding, type Position } from "@/api/client";
+import {
+  deleteHolding,
+  toErrorMessage,
+  updateHolding,
+  type HoldingRisk,
+  type Position,
+} from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+import { RiskBadge } from "@/features/risk/RiskBadge";
 
 import { formatCurrency, formatPercent, formatShares } from "./format";
 
@@ -11,10 +19,11 @@ type RowMode = "view" | "editing" | "confirmDelete";
 
 interface HoldingRowProps {
   position: Position;
+  risk?: HoldingRisk;
   onChanged: () => void;
 }
 
-export function HoldingRow({ position, onChanged }: HoldingRowProps) {
+export function HoldingRow({ position, risk, onChanged }: HoldingRowProps) {
   const [mode, setMode] = useState<RowMode>("view");
   const [draft, setDraft] = useState(position.quantity);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +101,15 @@ export function HoldingRow({ position, onChanged }: HoldingRowProps) {
           {formatPercent(position.weight_pct)}
         </td>
 
+        <td className="px-2 py-3 text-right">
+          <span className="inline-flex items-center justify-end gap-2">
+            <span className="font-mono tabular-nums text-foreground">
+              {formatPercent(risk?.volatility_pct ?? null)}
+            </span>
+            <RiskBadge band={risk?.band ?? null} />
+          </span>
+        </td>
+
         <td className="px-2 py-3">
           <div className="flex items-center justify-end gap-1.5">
             {mode === "view" && (
@@ -156,7 +174,7 @@ export function HoldingRow({ position, onChanged }: HoldingRowProps) {
 
       {error != null && (
         <tr>
-          <td colSpan={6} className="px-2 pb-3 text-right text-sm text-down" role="alert">
+          <td colSpan={7} className="px-2 pb-3 text-right text-sm text-down" role="alert">
             {error}
           </td>
         </tr>
