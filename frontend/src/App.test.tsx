@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as client from "@/api/client";
@@ -6,7 +7,7 @@ import { APP_NAME } from "@/config/branding";
 
 import App from "./App";
 
-const okHealth = {
+const health = {
   status: "ok" as const,
   service: "Orbit API",
   version: "0.1.0",
@@ -15,147 +16,206 @@ const okHealth = {
   market_data: "configured" as const,
 };
 
-const emptyRisk = {
-  holdings: [],
-  portfolio_volatility_pct: null,
-  portfolio_band: null,
-  undiversified_volatility_pct: null,
-  diversification_benefit_pct: null,
+const positions = [
+  {
+    id: 1,
+    ticker: "AAPL",
+    quantity: "10.000000",
+    latest_price: "319.70",
+    market_value: "3197.00",
+    weight_pct: "60.00",
+    price_as_of: "2026-08-28",
+  },
+  {
+    id: 2,
+    ticker: "BND",
+    quantity: "30.000000",
+    latest_price: "72.31",
+    market_value: "2169.30",
+    weight_pct: "40.00",
+    price_as_of: "2026-08-28",
+  },
+];
+
+const risk = {
+  holdings: [
+    { id: 1, ticker: "AAPL", volatility_pct: "25.16", band: "high" as const, observations: 249 },
+    { id: 2, ticker: "BND", volatility_pct: "3.69", band: "low" as const, observations: 249 },
+  ],
+  portfolio_volatility_pct: "17.94",
+  portfolio_band: "moderate" as const,
+  undiversified_volatility_pct: "20.91",
+  diversification_benefit_pct: "2.97",
   window_days: 365,
-  observations: 0,
+  observations: 249,
 };
 
-describe("App", () => {
+const correlation = {
+  tickers: ["AAPL", "BND"],
+  matrix: [
+    ["1.00", "0.14"],
+    ["0.14", "1.00"],
+  ],
+  most_correlated: [{ a: "AAPL", b: "BND", correlation: "0.14" }],
+  least_correlated: [{ a: "AAPL", b: "BND", correlation: "0.14" }],
+  average_correlation: "0.14",
+  window_days: 365,
+  observations: 249,
+  high_threshold: "0.75",
+  low_threshold: "0.30",
+};
+
+const history = {
+  points: [
+    { date: "2026-08-24", value: "5100.00" },
+    { date: "2026-08-25", value: "5200.00" },
+    { date: "2026-08-28", value: "5366.30" },
+  ],
+  start: "2026-08-24",
+  end: "2026-08-28",
+};
+
+function mockAll(overrides: { positions?: typeof positions } = {}) {
+  vi.spyOn(client, "getHealth").mockResolvedValue(health);
+  vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
+    positions: overrides.positions ?? positions,
+    total_value: "5366.30",
+    priced: true,
+  });
+  vi.spyOn(client, "getPortfolioRisk").mockResolvedValue(risk);
+  vi.spyOn(client, "getPortfolioCorrelation").mockResolvedValue(correlation);
+  vi.spyOn(client, "getPortfolioHistory").mockResolvedValue(history);
+}
+
+function renderAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <App />
+    </MemoryRouter>,
+  );
+}
+
+describe("Dashboard (US-10)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(client, "getHealth").mockResolvedValue(okHealth);
-    vi.spyOn(client, "getPortfolioRisk").mockResolvedValue(emptyRisk);
+    mockAll();
   });
 
-  it("renders the brand heading and an empty state", async () => {
-    vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
-      positions: [],
-      total_value: null,
-      priced: false,
-    });
-    render(<App />);
-    expect(screen.getByRole("heading", { level: 1, name: APP_NAME })).toBeInTheDocument();
+  it("shows the brand and the risk overview heading", async () => {
+    renderAt("/");
+    expect(await screen.findByRole("heading", { name: /risk overview/i })).toBeInTheDocument();
+    expect(screen.getAllByText(APP_NAME).length).toBeGreaterThan(0);
+  });
+
+  it("presents summary tiles before the detail", async () => {
+    renderAt("/");
+
+    expect(await screen.findByText("Portfolio value")).toBeInTheDocument();
+    // The total appears in the tile and again in the table footer.
+    expect(screen.getAllByText("$5,366.30").length).toBeGreaterThan(0);
+
+    // "Volatility" is both a tile label and a table column header.
+    expect(screen.getAllByText("Volatility").length).toBeGreaterThan(0);
+    expect(screen.getByText("17.9%")).toBeInTheDocument();
+    expect(screen.getByText("Moderate")).toBeInTheDocument();
+
+    expect(screen.getByText("Average correlation")).toBeInTheDocument();
+    expect(screen.getByText("Largest position")).toBeInTheDocument();
+  });
+
+  it("renders a value sparkline as a labelled image", async () => {
+    renderAt("/");
+    expect(
+      await screen.findByRole("img", { name: /portfolio value over time/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows holdings and the correlation matrix on the overview", async () => {
+    renderAt("/");
+    await screen.findByText("Portfolio value");
+
+    const table = screen.getAllByRole("table")[0];
+    expect(within(table).getByText("AAPL")).toBeInTheDocument();
+    expect(screen.getByText(/how your holdings move relative/i)).toBeInTheDocument();
+  });
+
+  it("prompts to add holdings when the portfolio is empty", async () => {
+    vi.restoreAllMocks();
+    mockAll({ positions: [] });
+    renderAt("/");
     expect(await screen.findByText(/no holdings yet/i)).toBeInTheDocument();
-  });
-
-  it("lists positions with prices, values, and a total (US-4)", async () => {
-    vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
-      positions: [
-        {
-          id: 1,
-          ticker: "AAPL",
-          quantity: "10.000000",
-          latest_price: "319.70",
-          market_value: "3197.00",
-          weight_pct: "60.00",
-          price_as_of: "2026-08-28",
-        },
-        {
-          id: 2,
-          ticker: "NVDA",
-          quantity: "2.500000",
-          latest_price: "850.00",
-          market_value: "2125.00",
-          weight_pct: "40.00",
-          price_as_of: "2026-08-28",
-        },
-      ],
-      total_value: "5322.00",
-      priced: true,
-    });
-
-    render(<App />);
-
-    expect(await screen.findByText("AAPL")).toBeInTheDocument();
-    expect(screen.getByText("NVDA")).toBeInTheDocument();
-    expect(screen.getByText("$319.70")).toBeInTheDocument();
-    expect(screen.getByText("$3,197.00")).toBeInTheDocument();
-    expect(screen.getByText("60.0%")).toBeInTheDocument();
-    // portfolio total
-    expect(screen.getByText("$5,322.00")).toBeInTheDocument();
-  });
-
-  it("shows a dash when a position could not be priced", async () => {
-    vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
-      positions: [
-        {
-          id: 1,
-          ticker: "AAPL",
-          quantity: "10.000000",
-          latest_price: null,
-          market_value: null,
-          weight_pct: null,
-          price_as_of: null,
-        },
-      ],
-      total_value: null,
-      priced: false,
-    });
-
-    render(<App />);
-
-    expect(await screen.findByText("AAPL")).toBeInTheDocument();
-    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 });
 
-describe("Volatility (US-5)", () => {
+describe("Navigation (US-10)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(client, "getHealth").mockResolvedValue(okHealth);
+    mockAll();
+  });
+
+  it("routes to the holdings page with the editing tools", async () => {
+    renderAt("/holdings");
+    expect(await screen.findByRole("heading", { name: /^holdings$/i })).toBeInTheDocument();
+    expect(screen.getByText(/add a holding/i)).toBeInTheDocument();
+    expect(screen.getByText(/import from a csv/i)).toBeInTheDocument();
+  });
+
+  it("routes to the correlation page", async () => {
+    renderAt("/correlation");
+    expect(
+      await screen.findByRole("heading", { name: /how your holdings move|^correlation$/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("navigates from the sidebar", async () => {
+    renderAt("/");
+    await screen.findByText("Portfolio value");
+
+    fireEvent.click(screen.getByRole("link", { name: /holdings/i }));
+
+    await waitFor(() => expect(screen.getByText(/import from a csv/i)).toBeInTheDocument());
+  });
+
+  it("shows a not-found page for an unknown route", async () => {
+    renderAt("/nope");
+    expect(await screen.findByText(/doesn't exist/i)).toBeInTheDocument();
+  });
+
+  it("marks unbuilt sections as coming soon rather than hiding them", async () => {
+    renderAt("/");
+    expect(screen.getAllByText("SOON").length).toBeGreaterThan(0);
+    expect(screen.getByText("Concentration")).toBeInTheDocument();
+    expect(screen.getByText("Drawdown")).toBeInTheDocument();
+  });
+});
+
+describe("Load states", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("surfaces an error when the portfolio cannot be loaded", async () => {
+    vi.spyOn(client, "getHealth").mockResolvedValue(health);
+    vi.spyOn(client, "getPortfolioSummary").mockRejectedValue(new Error("down"));
+    vi.spyOn(client, "getPortfolioRisk").mockResolvedValue(risk);
+    vi.spyOn(client, "getPortfolioCorrelation").mockResolvedValue(correlation);
+    vi.spyOn(client, "getPortfolioHistory").mockResolvedValue(history);
+
+    renderAt("/");
+    expect(await screen.findByText(/could not load your portfolio/i)).toBeInTheDocument();
+  });
+
+  it("still renders holdings when only the analytics calls fail", async () => {
+    vi.spyOn(client, "getHealth").mockResolvedValue(health);
     vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
-      positions: [
-        {
-          id: 1,
-          ticker: "AAPL",
-          quantity: "10.000000",
-          latest_price: "319.70",
-          market_value: "3197.00",
-          weight_pct: "100.00",
-          price_as_of: "2026-08-28",
-        },
-      ],
-      total_value: "3197.00",
+      positions,
+      total_value: "5366.30",
       priced: true,
     });
-  });
-
-  it("shows volatility for the holding and for the portfolio", async () => {
-    vi.spyOn(client, "getPortfolioRisk").mockResolvedValue({
-      holdings: [
-        { id: 1, ticker: "AAPL", volatility_pct: "25.16", band: "high", observations: 249 },
-      ],
-      portfolio_volatility_pct: "17.94",
-      portfolio_band: "moderate",
-      undiversified_volatility_pct: "20.91",
-      diversification_benefit_pct: "2.97",
-      window_days: 365,
-      observations: 249,
-    });
-
-    render(<App />);
-
-    // portfolio figure + band
-    expect(await screen.findByText("17.9%")).toBeInTheDocument();
-    expect(screen.getByText("Moderate")).toBeInTheDocument();
-    // per-holding figure + band
-    expect(screen.getByText("25.2%")).toBeInTheDocument();
-    expect(screen.getByText("Elevated")).toBeInTheDocument();
-    // diversification comparison
-    expect(screen.getByText("20.9%")).toBeInTheDocument();
-    expect(screen.getByText("−3.0%")).toBeInTheDocument();
-  });
-
-  it("still shows holdings when the risk call fails", async () => {
     vi.spyOn(client, "getPortfolioRisk").mockRejectedValue(new Error("risk down"));
-    render(<App />);
-    expect(await screen.findByText("AAPL")).toBeInTheDocument();
-    // (the single position's value also appears as the portfolio total)
-    expect(screen.getAllByText("$3,197.00").length).toBeGreaterThan(0);
+    vi.spyOn(client, "getPortfolioCorrelation").mockRejectedValue(new Error("corr down"));
+    vi.spyOn(client, "getPortfolioHistory").mockRejectedValue(new Error("hist down"));
+
+    renderAt("/");
+    expect((await screen.findAllByText("$5,366.30")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("AAPL").length).toBeGreaterThan(0);
   });
 });
