@@ -75,6 +75,51 @@ const history = {
   end: "2026-08-28",
 };
 
+const concentration = {
+  hhi: "0.35",
+  effective_holdings: "2.88",
+  holdings_count: 2,
+  top_1_pct: "60.00",
+  top_3_pct: "100.00",
+  top_5_pct: "100.00",
+  overweight: [{ ticker: "AAPL", weight_pct: "60.00", times_equal_weight: "1.20" }],
+  overlaps: [{ tickers: ["QQQ", "VOO"], combined_weight_pct: "25.15", min_correlation: "0.92" }],
+  overweight_multiple: "2",
+  overlap_threshold: "0.75",
+};
+
+const drawdown = {
+  max_drawdown_pct: "-24.43",
+  current_drawdown_pct: "-14.90",
+  episodes: [
+    {
+      depth_pct: "-24.43",
+      peak_date: "2025-12-22",
+      trough_date: "2026-07-29",
+      recovery_date: null,
+      decline_days: 149,
+      recovery_days: null,
+      recovered: false,
+    },
+    {
+      depth_pct: "-12.33",
+      peak_date: "2025-11-03",
+      trough_date: "2025-11-21",
+      recovery_date: "2025-12-15",
+      decline_days: 14,
+      recovery_days: 15,
+      recovered: true,
+    },
+  ],
+  series: [
+    { date: "2026-08-24", drawdown_pct: "0.00" },
+    { date: "2026-08-25", drawdown_pct: "-5.00" },
+    { date: "2026-08-28", drawdown_pct: "-14.90" },
+  ],
+  window_days: 365,
+  observations: 249,
+};
+
 function mockAll(overrides: { positions?: typeof positions } = {}) {
   vi.spyOn(client, "getHealth").mockResolvedValue(health);
   vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
@@ -85,6 +130,8 @@ function mockAll(overrides: { positions?: typeof positions } = {}) {
   vi.spyOn(client, "getPortfolioRisk").mockResolvedValue(risk);
   vi.spyOn(client, "getPortfolioCorrelation").mockResolvedValue(correlation);
   vi.spyOn(client, "getPortfolioHistory").mockResolvedValue(history);
+  vi.spyOn(client, "getPortfolioConcentration").mockResolvedValue(concentration);
+  vi.spyOn(client, "getPortfolioDrawdown").mockResolvedValue(drawdown);
 }
 
 function renderAt(path: string) {
@@ -120,7 +167,11 @@ describe("Dashboard (US-10)", () => {
     expect(screen.getByText("Moderate")).toBeInTheDocument();
 
     expect(screen.getByText("Average correlation")).toBeInTheDocument();
-    expect(screen.getByText("Largest position")).toBeInTheDocument();
+    expect(screen.getByText("Effective holdings")).toBeInTheDocument();
+    // 2.88 effective appears in the tile and in the concentration card below.
+    expect(screen.getAllByText("2.9").length).toBeGreaterThan(0);
+    // "Worst decline" labels both the tile and the drawdown card.
+    expect(screen.getAllByText("Worst decline").length).toBeGreaterThan(0);
   });
 
   it("renders a value sparkline as a labelled image", async () => {
@@ -181,11 +232,27 @@ describe("Navigation (US-10)", () => {
     expect(await screen.findByText(/doesn't exist/i)).toBeInTheDocument();
   });
 
-  it("marks unbuilt sections as coming soon rather than hiding them", async () => {
+  it("links concentration and drawdown now that they are built", async () => {
     renderAt("/");
+    expect(screen.getByRole("link", { name: /concentration/i })).toHaveAttribute(
+      "href",
+      "/concentration",
+    );
+    expect(screen.getByRole("link", { name: /drawdown/i })).toHaveAttribute("href", "/drawdown");
+    // Still-unbuilt sections keep their SOON marker.
     expect(screen.getAllByText("SOON").length).toBeGreaterThan(0);
-    expect(screen.getByText("Concentration")).toBeInTheDocument();
-    expect(screen.getByText("Drawdown")).toBeInTheDocument();
+  });
+
+  it("routes to concentration and drawdown", async () => {
+    renderAt("/concentration");
+    expect(await screen.findByText(/effective holdings, from/i)).toBeInTheDocument();
+  });
+
+  it("shows drawdown episodes including one that never recovered", async () => {
+    renderAt("/drawdown");
+    expect(await screen.findByText(/largest declines/i)).toBeInTheDocument();
+    expect(screen.getByText(/not recovered/i)).toBeInTheDocument();
+    expect(screen.getAllByText("-24.4%").length).toBeGreaterThan(0);
   });
 });
 
@@ -198,6 +265,8 @@ describe("Load states", () => {
     vi.spyOn(client, "getPortfolioRisk").mockResolvedValue(risk);
     vi.spyOn(client, "getPortfolioCorrelation").mockResolvedValue(correlation);
     vi.spyOn(client, "getPortfolioHistory").mockResolvedValue(history);
+    vi.spyOn(client, "getPortfolioConcentration").mockResolvedValue(concentration);
+    vi.spyOn(client, "getPortfolioDrawdown").mockResolvedValue(drawdown);
 
     renderAt("/");
     expect(await screen.findByText(/could not load your portfolio/i)).toBeInTheDocument();
@@ -213,6 +282,8 @@ describe("Load states", () => {
     vi.spyOn(client, "getPortfolioRisk").mockRejectedValue(new Error("risk down"));
     vi.spyOn(client, "getPortfolioCorrelation").mockRejectedValue(new Error("corr down"));
     vi.spyOn(client, "getPortfolioHistory").mockRejectedValue(new Error("hist down"));
+    vi.spyOn(client, "getPortfolioConcentration").mockRejectedValue(new Error("conc down"));
+    vi.spyOn(client, "getPortfolioDrawdown").mockRejectedValue(new Error("dd down"));
 
     renderAt("/");
     expect((await screen.findAllByText("$5,366.30")).length).toBeGreaterThan(0);

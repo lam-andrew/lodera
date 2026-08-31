@@ -227,3 +227,72 @@ class PortfolioHistoryRead(BaseModel):
     points: list[PortfolioValuePointRead]
     start: dt.date | None = None
     end: dt.date | None = None
+
+
+class OverweightPositionRead(BaseModel):
+    """A position larger than its equal-weight share by the configured multiple (US-7)."""
+
+    ticker: str
+    weight_pct: Decimal
+    #: How many times an equal-weight share this position is.
+    times_equal_weight: Decimal
+
+
+class OverlapGroupRead(BaseModel):
+    """Holdings that move together closely enough to act as a single position (US-7)."""
+
+    tickers: list[str]
+    combined_weight_pct: Decimal
+    min_correlation: Decimal
+
+
+class PortfolioConcentrationRead(BaseModel):
+    """Concentration and exposure (US-7, FR-9)."""
+
+    #: Herfindahl-Hirschman Index of position weights, 1/n (equal) to 1 (single holding).
+    hhi: Decimal | None = None
+    #: 1 / HHI — equally-weighted positions that would be as concentrated as this portfolio.
+    effective_holdings: Decimal | None = None
+    holdings_count: int
+    top_1_pct: Decimal | None = None
+    top_3_pct: Decimal | None = None
+    top_5_pct: Decimal | None = None
+    overweight: list[OverweightPositionRead]
+    overlaps: list[OverlapGroupRead]
+    #: The equal-weight multiple used to flag a position, exposed so the UI can explain it.
+    overweight_multiple: Decimal
+    overlap_threshold: Decimal
+
+
+class DrawdownEpisodeRead(BaseModel):
+    """One peak-to-trough decline (US-8)."""
+
+    depth_pct: Decimal
+    peak_date: dt.date
+    trough_date: dt.date
+    recovery_date: dt.date | None = None
+    decline_days: int
+    recovery_days: int | None = None
+    recovered: bool
+
+
+class DrawdownPointRead(BaseModel):
+    """Portfolio decline from its running peak on one trading day."""
+
+    date: dt.date
+    drawdown_pct: Decimal
+
+
+class PortfolioDrawdownRead(BaseModel):
+    """Historical drawdown (US-8, FR-10).
+
+    Figures are realized historical facts about the window, not annualized rates.
+    """
+
+    max_drawdown_pct: Decimal | None = None
+    current_drawdown_pct: Decimal | None = None
+    episodes: list[DrawdownEpisodeRead]
+    #: The underwater series, for plotting.
+    series: list[DrawdownPointRead]
+    window_days: int
+    observations: int

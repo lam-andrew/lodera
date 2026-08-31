@@ -39,6 +39,31 @@ class PortfolioSeries:
     #: Number of shared daily returns backing the aligned matrix.
     observations: int = 0
 
+    def value_series(self) -> tuple[list[date], list[Decimal]]:
+        """Portfolio market value per shared trading day, at today's share quantities.
+
+        Used by the value sparkline (US-10) and by drawdown (US-8). Only dates every priced
+        holding shares are included, so a point is never a partial sum of the portfolio.
+        """
+        if not self.priced_tickers:
+            return [], []
+
+        quantities = {h.ticker: h.quantity for h in self.holdings}
+        common: set[date] | None = None
+        for ticker in self.priced_tickers:
+            dates = set(self.prices[ticker])
+            common = dates if common is None else (common & dates)
+
+        ordered = sorted(common or set())
+        values = [
+            sum(
+                (self.prices[t][day] * quantities[t] for t in self.priced_tickers),
+                Decimal("0"),
+            )
+            for day in ordered
+        ]
+        return ordered, values
+
     def full_series(self, ticker: str) -> list[Decimal]:
         """One holding's complete price history in date order (not date-aligned)."""
         by_date = self.prices.get(ticker, {})

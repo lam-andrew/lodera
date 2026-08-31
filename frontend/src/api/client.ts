@@ -194,3 +194,67 @@ export async function getPortfolioHistory(): Promise<PortfolioHistory> {
   const { data } = await api.get<PortfolioHistory>("/portfolio/history");
   return data;
 }
+
+/** A position larger than its equal-weight share (US-7). */
+export interface OverweightPosition {
+  ticker: string;
+  weight_pct: string;
+  times_equal_weight: string;
+}
+
+/** Holdings that move together closely enough to act as one position (US-7). */
+export interface OverlapGroup {
+  tickers: string[];
+  combined_weight_pct: string;
+  min_correlation: string;
+}
+
+export interface PortfolioConcentration {
+  hhi: string | null;
+  effective_holdings: string | null;
+  holdings_count: number;
+  top_1_pct: string | null;
+  top_3_pct: string | null;
+  top_5_pct: string | null;
+  overweight: OverweightPosition[];
+  overlaps: OverlapGroup[];
+  overweight_multiple: string;
+  overlap_threshold: string;
+}
+
+/** Where the portfolio is overexposed. */
+export async function getPortfolioConcentration(): Promise<PortfolioConcentration> {
+  const { data } = await api.get<PortfolioConcentration>("/portfolio/concentration");
+  return data;
+}
+
+/** One peak-to-trough decline (US-8). */
+export interface DrawdownEpisode {
+  depth_pct: string;
+  peak_date: string;
+  trough_date: string;
+  recovery_date: string | null;
+  decline_days: number;
+  recovery_days: number | null;
+  recovered: boolean;
+}
+
+export interface DrawdownPoint {
+  date: string;
+  drawdown_pct: string;
+}
+
+export interface PortfolioDrawdown {
+  max_drawdown_pct: string | null;
+  current_drawdown_pct: string | null;
+  episodes: DrawdownEpisode[];
+  series: DrawdownPoint[];
+  window_days: number;
+  observations: number;
+}
+
+/** The portfolio's worst historical declines. */
+export async function getPortfolioDrawdown(): Promise<PortfolioDrawdown> {
+  const { data } = await api.get<PortfolioDrawdown>("/portfolio/drawdown");
+  return data;
+}

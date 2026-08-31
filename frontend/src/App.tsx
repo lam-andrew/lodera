@@ -9,8 +9,10 @@ import { Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePortfolio, type PortfolioData, type PortfolioState } from "@/hooks/usePortfolio";
+import { ConcentrationPage } from "@/pages/ConcentrationPage";
 import { CorrelationPage } from "@/pages/CorrelationPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { DrawdownPage } from "@/pages/DrawdownPage";
 import { HoldingsPage } from "@/pages/HoldingsPage";
 
 function Loading() {
@@ -85,6 +87,22 @@ export default function App() {
         element={
           <AppShell title="Correlation" subtitle="How your holdings move relative to each other">
             <Loaded state={state}>{(data) => <CorrelationPage data={data} />}</Loaded>
+          </AppShell>
+        }
+      />
+      <Route
+        path="/concentration"
+        element={
+          <AppShell title="Concentration" subtitle="Where the portfolio is overexposed">
+            <Loaded state={state}>{(data) => <ConcentrationPage data={data} />}</Loaded>
+          </AppShell>
+        }
+      />
+      <Route
+        path="/drawdown"
+        element={
+          <AppShell title="Drawdown" subtitle="The portfolio's worst historical declines">
+            <Loaded state={state}>{(data) => <DrawdownPage data={data} />}</Loaded>
           </AppShell>
         }
       />

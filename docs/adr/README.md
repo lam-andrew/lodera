@@ -33,3 +33,4 @@ capture an architecturally significant decision, its context, and its consequenc
 | [0010](0010-alembic-migrations.md) | Database schema migrations with Alembic | Accepted |
 | [0011](0011-market-data-provider.md) | Market data via Tiingo, behind a provider interface | Accepted |
 | [0012](0012-risk-methodology.md) | Risk engine methodology and conventions | Accepted |
+| [0013](0013-hand-authored-charts.md) | Hand-authored SVG charts instead of a charting library | Accepted |
