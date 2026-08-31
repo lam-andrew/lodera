@@ -1,17 +1,15 @@
 import type { Holding } from "@/api/client";
 
-function formatShares(quantity: string): string {
-  const value = Number(quantity);
-  if (Number.isNaN(value)) return quantity;
-  return value.toLocaleString(undefined, { maximumFractionDigits: 6 });
-}
+import { HoldingRow } from "./HoldingRow";
 
 interface HoldingsTableProps {
   holdings: Holding[];
+  onChanged: () => void;
 }
 
-/** Renders the portfolio's holdings, or an empty-state prompt when there are none. */
-export function HoldingsTable({ holdings }: HoldingsTableProps) {
+/** Renders the portfolio's holdings with edit/delete controls (US-1 view, US-3 manage),
+ *  or an empty-state prompt when there are none. */
+export function HoldingsTable({ holdings, onChanged }: HoldingsTableProps) {
   if (holdings.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-faint">
@@ -31,16 +29,14 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
             <th className="px-2 py-2 text-right font-mono text-[10.5px] font-medium uppercase tracking-wider text-faint">
               Shares
             </th>
+            <th className="px-2 py-2 text-right">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {holdings.map((holding) => (
-            <tr key={holding.id} className="border-b border-border/60 last:border-0">
-              <td className="px-2 py-3 font-medium text-foreground">{holding.ticker}</td>
-              <td className="px-2 py-3 text-right font-mono tabular-nums text-foreground">
-                {formatShares(holding.quantity)}
-              </td>
-            </tr>
+            <HoldingRow key={holding.id} holding={holding} onChanged={onChanged} />
           ))}
         </tbody>
       </table>

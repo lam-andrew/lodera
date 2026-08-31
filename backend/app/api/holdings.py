@@ -1,4 +1,4 @@
-"""Holdings routes (US-1: add a holding manually; US-3 later: edit/delete).
+"""Holdings routes (US-1: add a holding manually; US-3: view, edit, delete).
 
 Part of the public API contract. Persists holdings for the MVP's single default portfolio
 (user scoping arrives with auth, US-13). Ticker recognition uses the stopgap validator in
@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.schemas import HoldingCreate, HoldingRead
+from app.api.schemas import HoldingCreate, HoldingRead, HoldingUpdate
 from app.core.database import get_session
 from app.data.symbols import is_known_symbol
 from app.models import Holding, Portfolio
@@ -84,3 +84,44 @@ def add_holding(payload: HoldingCreate, session: SessionDep) -> Holding:
     session.commit()
     session.refresh(holding)
     return holding
+
+
+def _get_owned_holding(session: Session, holding_id: int) -> Holding:
+    """Fetch a holding in the default portfolio, or raise 404.
+
+    Scoping the lookup to the portfolio (not just the id) is what will keep one user from
+    touching another's holdings once auth lands (US-13).
+    """
+    portfolio = _get_default_portfolio(session)
+    holding = (
+        None
+        if portfolio is None
+        else session.scalar(
+            select(Holding).where(Holding.id == holding_id, Holding.portfolio_id == portfolio.id)
+        )
+    )
+    if holding is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="That holding no longer exists.",
+        )
+    return holding
+
+
+@router.patch("/{holding_id}", response_model=HoldingRead)
+def update_holding(holding_id: int, payload: HoldingUpdate, session: SessionDep) -> Holding:
+    """Edit a holding's share quantity (US-3). The new quantity must be positive; to remove
+    a position entirely, delete it instead."""
+    holding = _get_owned_holding(session, holding_id)
+    holding.quantity = payload.quantity
+    session.commit()
+    session.refresh(holding)
+    return holding
+
+
+@router.delete("/{holding_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_holding(holding_id: int, session: SessionDep) -> None:
+    """Remove a holding from the portfolio (US-3), excluding it from further analysis."""
+    holding = _get_owned_holding(session, holding_id)
+    session.delete(holding)
+    session.commit()

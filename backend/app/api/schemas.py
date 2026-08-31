@@ -42,6 +42,13 @@ class HoldingCreate(BaseModel):
         return normalized
 
 
+class HoldingUpdate(BaseModel):
+    """Request body for editing a holding (US-3). Only the quantity is editable; to change
+    the ticker, delete the holding and add the new one."""
+
+    quantity: Decimal = Field(gt=0, examples=["12.5"])
+
+
 class HoldingRead(BaseModel):
     """A stored holding, as returned by the API."""
 
