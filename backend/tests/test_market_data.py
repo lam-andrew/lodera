@@ -76,6 +76,23 @@ def session_factory():  # type: ignore[no-untyped-def]
     engine.dispose()
 
 
+@pytest.fixture()
+def threaded_session_factory(tmp_path):  # type: ignore[no-untyped-def]
+    """A session factory whose sessions get genuinely independent connections.
+
+    The in-memory ``session_factory`` above uses ``StaticPool``, which shares a single SQLite
+    connection across every session. That is fine (and fast) for single-threaded tests, but
+    threads hitting one connection at once corrupt it — the failure surfaces as an unrelated
+    ``IndexError: tuple index out of range`` from the driver, not as anything about our code.
+    A file-backed database with the default pool gives each thread its own connection, which
+    is what production does: every request checks one out of the pool.
+    """
+    engine = create_engine(f"sqlite:///{tmp_path / 'cache.db'}")
+    Base.metadata.create_all(engine)
+    yield sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    engine.dispose()
+
+
 def _age_cache(session, *, hours: int) -> None:  # type: ignore[no-untyped-def]
     """Push the cache past its TTL by backdating both bars and coverage."""
     stale = datetime.now(UTC) - timedelta(hours=hours)
@@ -221,7 +238,7 @@ def test_a_narrow_cached_window_does_not_answer_a_wider_request(session_factory)
     assert provider.price_calls == 2
 
 
-def test_concurrent_requests_fetch_a_ticker_only_once(session_factory) -> None:  # type: ignore[no-untyped-def]
+def test_concurrent_requests_fetch_a_ticker_only_once(threaded_session_factory) -> None:  # type: ignore[no-untyped-def]
     """Regression: five dashboard endpoints hitting a cold cache at once.
 
     Before the per-ticker lock they all missed together, all called the provider, and then
@@ -241,7 +258,7 @@ def test_concurrent_requests_fetch_a_ticker_only_once(session_factory) -> None: 
 
     def worker() -> None:
         try:
-            service = MarketDataService(session_factory(), provider, ttl_hours=24)
+            service = MarketDataService(threaded_session_factory(), provider, ttl_hours=24)
             barrier.wait()  # maximise the overlap
             results.append(service.get_daily_prices("AAPL", start, end).source)
         except BaseException as exc:  # noqa: BLE001 - surfaced via `errors` below
