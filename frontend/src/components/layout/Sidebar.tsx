@@ -62,7 +62,15 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
 const base =
   "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar({
+  email,
+  onSignOut,
+  onNavigate,
+}: {
+  email: string;
+  onSignOut: () => Promise<void>;
+  onNavigate?: () => void;
+}) {
   return (
     <div className="flex h-full flex-col gap-6 p-4">
       <div className="flex items-center gap-2.5 px-1.5 pt-1">
@@ -128,6 +136,43 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         ))}
       </nav>
+
+      <div className="mt-auto flex flex-col gap-2 border-t border-border pt-3">
+        <div className="flex items-center gap-2.5 px-1.5">
+          <span
+            className="grid h-7 w-7 flex-none place-items-center rounded-full bg-surface-2 text-[11px] font-semibold uppercase text-muted-foreground"
+            aria-hidden="true"
+          >
+            {email.slice(0, 2)}
+          </span>
+          <span className="min-w-0 truncate text-xs text-muted-foreground" title={email}>
+            {email}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => void onSignOut()}
+          className={cn(
+            base,
+            "w-full text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+          )}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-4 w-4 flex-none opacity-80"
+          >
+            <path
+              d="M15 17l5-5-5-5M20 12H9M12 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }

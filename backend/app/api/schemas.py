@@ -11,7 +11,7 @@ import re
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_serializer, field_validator
 
 # Basic ticker shape (e.g. AAPL, BRK.B). Recognition against real symbols is a separate,
 # domain-level check performed in the route (see app.data.symbols).
@@ -296,3 +296,26 @@ class PortfolioDrawdownRead(BaseModel):
     series: list[DrawdownPointRead]
     window_days: int
     observations: int
+
+
+class RegisterRequest(BaseModel):
+    """Create an account (US-13)."""
+
+    email: EmailStr
+    #: A floor, not a strength policy. Length is the property that actually matters, and
+    #: composition rules push users toward predictable substitutions.
+    password: str = Field(min_length=12, max_length=256)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=256)
+
+
+class UserRead(BaseModel):
+    """The signed-in account. Never includes the password hash."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: EmailStr

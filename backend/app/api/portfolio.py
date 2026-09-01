@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api._portfolio_series import load_portfolio_series
-from app.api.holdings import DEFAULT_PORTFOLIO_NAME
+from app.api.auth import CurrentUser
 from app.api.market_data import ServiceDep
 from app.api.schemas import (
     PortfolioHistoryRead,
@@ -37,13 +37,15 @@ _PRICE_LOOKBACK_DAYS = 10
 
 
 @router.get("/summary", response_model=PortfolioSummaryRead)
-def get_summary(session: SessionDep, service: ServiceDep) -> PortfolioSummaryRead:
+def get_summary(
+    session: SessionDep, service: ServiceDep, user: CurrentUser
+) -> PortfolioSummaryRead:
     """Return each holding with its latest close and market value, plus the total.
 
     A position whose price cannot be retrieved is still listed, with nulls, so one bad
     symbol or a provider hiccup never hides the rest of the portfolio.
     """
-    portfolio = session.scalar(select(Portfolio).where(Portfolio.name == DEFAULT_PORTFOLIO_NAME))
+    portfolio = session.scalar(select(Portfolio).where(Portfolio.user_id == user.id))
     holdings: list[Holding] = (
         []
         if portfolio is None
@@ -109,6 +111,7 @@ def get_summary(session: SessionDep, service: ServiceDep) -> PortfolioSummaryRea
 def get_history(
     session: SessionDep,
     service: ServiceDep,
+    user: CurrentUser,
     days: Annotated[int, Query(ge=30, le=3650)] = 365,
 ) -> PortfolioHistoryRead:
     """Portfolio market value over time, at today's share quantities.
@@ -117,7 +120,7 @@ def get_history(
     day. Holding quantities are held constant at their current values, so the series shows
     how *this* portfolio would have moved — it is not a record of past trading activity.
     """
-    data = load_portfolio_series(session, service, days=days)
+    data = load_portfolio_series(session, service, user_id=user.id, days=days)
     dates, values = data.value_series()
 
     points = [

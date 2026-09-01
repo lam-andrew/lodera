@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api._portfolio_series import load_portfolio_series
+from app.api.auth import CurrentUser
 from app.api.market_data import ServiceDep
 from app.api.schemas import (
     CorrelationPairRead,
@@ -61,6 +62,7 @@ def _round(value: float | None) -> Decimal | None:
 def get_risk(
     session: SessionDep,
     service: ServiceDep,
+    user: CurrentUser,
     days: Annotated[int, Query(ge=30, le=3650)] = DEFAULT_WINDOW_DAYS,
 ) -> PortfolioRiskRead:
     """Annualized volatility for each holding and for the portfolio as a whole.
@@ -69,7 +71,7 @@ def get_risk(
     portfolio figure additionally requires the holdings to be aligned to common trading
     dates, so the covariance between them is computed over the same days.
     """
-    data = load_portfolio_series(session, service, days=days)
+    data = load_portfolio_series(session, service, user_id=user.id, days=days)
 
     rows = [
         HoldingRiskRead(
@@ -122,6 +124,7 @@ def get_risk(
 def get_correlation(
     session: SessionDep,
     service: ServiceDep,
+    user: CurrentUser,
     days: Annotated[int, Query(ge=30, le=3650)] = DEFAULT_WINDOW_DAYS,
 ) -> PortfolioCorrelationRead:
     """Correlation structure among the portfolio's holdings (US-6).
@@ -130,7 +133,7 @@ def get_correlation(
     grid answers "what are the numbers" while the pairs answer the question the user
     actually has: where is the hidden concentration, and what is actually diversifying.
     """
-    data = load_portfolio_series(session, service, days=days)
+    data = load_portfolio_series(session, service, user_id=user.id, days=days)
     matrix = correlation_matrix(data.matrix) if data.matrix else None
 
     if matrix is None:

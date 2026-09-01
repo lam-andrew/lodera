@@ -16,7 +16,6 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.holdings import DEFAULT_PORTFOLIO_NAME
 from app.data.provider import MarketDataError
 from app.data.service import MarketDataService
 from app.engines.risk import daily_returns
@@ -71,10 +70,10 @@ class PortfolioSeries:
 
 
 def load_portfolio_series(
-    session: Session, service: MarketDataService, *, days: int
+    session: Session, service: MarketDataService, *, user_id: int, days: int
 ) -> PortfolioSeries:
     """Load holdings and their price history, and align returns to common trading dates."""
-    portfolio = session.scalar(select(Portfolio).where(Portfolio.name == DEFAULT_PORTFOLIO_NAME))
+    portfolio = session.scalar(select(Portfolio).where(Portfolio.user_id == user_id))
     holdings: list[Holding] = (
         []
         if portfolio is None

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api._portfolio_series import load_portfolio_series
+from app.api.auth import CurrentUser
 from app.api.market_data import ServiceDep
 from app.api.schemas import (
     DrawdownEpisodeRead,
@@ -62,6 +63,7 @@ def _round(value: float | None) -> Decimal | None:
 def get_concentration(
     session: SessionDep,
     service: ServiceDep,
+    user: CurrentUser,
     days: Annotated[int, Query(ge=30, le=3650)] = DEFAULT_WINDOW_DAYS,
 ) -> PortfolioConcentrationRead:
     """Where the portfolio is overexposed (US-7).
@@ -69,7 +71,7 @@ def get_concentration(
     Reports both kinds of concentration: single positions that are simply large, and groups
     of holdings that move together closely enough to behave as one much larger position.
     """
-    data = load_portfolio_series(session, service, days=days)
+    data = load_portfolio_series(session, service, user_id=user.id, days=days)
 
     priced = data.priced_tickers
     values = [float(data.values[t]) for t in priced]
@@ -122,6 +124,7 @@ def get_concentration(
 def get_drawdown(
     session: SessionDep,
     service: ServiceDep,
+    user: CurrentUser,
     days: Annotated[int, Query(ge=30, le=3650)] = DEFAULT_WINDOW_DAYS,
 ) -> PortfolioDrawdownRead:
     """The portfolio's worst historical declines (US-8).
@@ -129,7 +132,7 @@ def get_drawdown(
     Portfolio value is reconstructed at today's share quantities, so the series shows how
     the *current* portfolio would have behaved through the window.
     """
-    data = load_portfolio_series(session, service, days=days)
+    data = load_portfolio_series(session, service, user_id=user.id, days=days)
     ordered_dates, decimal_values = data.value_series()
 
     if not ordered_dates:
