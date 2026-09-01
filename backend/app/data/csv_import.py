@@ -49,6 +49,7 @@ _QUANTITY_HEADERS: tuple[frozenset[str], ...] = (
 _NON_POSITION_LABELS = frozenset(
     {
         "accounttotal",
+        "positionstotal",
         "total",
         "totals",
         "grandtotal",
@@ -75,6 +76,27 @@ _MAX_ROWS = 5000
 def _normalize_header(value: str) -> str:
     """Lowercase and strip everything but letters/digits, so 'Share Price' -> 'shareprice'."""
     return re.sub(r"[^a-z0-9]", "", value.strip().lower())
+
+
+#: Header cells written as "Short (Long)" — Schwab labels its columns this way throughout
+#: ("Qty (Quantity)", "Mkt Val (Market Value)", "Gain $ (Gain/Loss $)").
+_PAREN_HEADER_RE = re.compile(r"^([^(]*)\(([^)]*)\)\s*$")
+
+
+def _header_candidates(value: str) -> set[str]:
+    """Every normalized form a header cell could reasonably be matched by.
+
+    A cell like ``"Qty (Quantity)"`` yields ``{"qtyquantity", "qty", "quantity"}`` so that
+    either the abbreviation or the expansion can match an alias. Without this, the combined
+    form matches nothing and the column is missed entirely.
+    """
+    text = value.strip().lower()
+    forms = {text}
+    paren = _PAREN_HEADER_RE.match(text)
+    if paren is not None:
+        forms.add(paren.group(1))
+        forms.add(paren.group(2))
+    return {normalized for normalized in (re.sub(r"[^a-z0-9]", "", f) for f in forms) if normalized}
 
 
 def _clean_number(raw: str) -> Decimal | None:
@@ -150,18 +172,18 @@ def _find_header(rows: list[list[str]]) -> tuple[int, int, int, str, str] | None
     assuming row 0) is what lets us read exports that open with a title line.
     """
 
-    def best_match(normalized: list[str], tiers: tuple[frozenset[str], ...]) -> int | None:
+    def best_match(candidates: list[set[str]], tiers: tuple[frozenset[str], ...]) -> int | None:
         """First column matching the most preferred tier that appears at all."""
         for tier in tiers:
-            match = next((i for i, cell in enumerate(normalized) if cell in tier), None)
+            match = next((i for i, forms in enumerate(candidates) if forms & tier), None)
             if match is not None:
                 return match
         return None
 
     for index, row in enumerate(rows[:25]):  # headers live near the top in every real export
-        normalized = [_normalize_header(cell) for cell in row]
-        ticker_index = best_match(normalized, _TICKER_HEADERS)
-        quantity_index = best_match(normalized, _QUANTITY_HEADERS)
+        candidates = [_header_candidates(cell) for cell in row]
+        ticker_index = best_match(candidates, _TICKER_HEADERS)
+        quantity_index = best_match(candidates, _QUANTITY_HEADERS)
         if ticker_index is not None and quantity_index is not None:
             return (
                 index,
@@ -186,12 +208,19 @@ def parse_portfolio_csv(data: bytes) -> ParseResult:
 
     header = _find_header(rows)
     if header is None:
+        # Report the headers we actually saw. Without this the user has no way to tell
+        # whether the file was misread or simply has columns we do not recognise.
+        likely_header = next(
+            (row for row in rows[:25] if sum(1 for cell in row if cell.strip()) > 1), []
+        )
+        found = ", ".join(cell.strip() for cell in likely_header if cell.strip())[:200]
         return ParseResult(
             problems=[
                 RowProblem(
                     0,
                     "Could not find a ticker column and a share-quantity column. Expected "
-                    "headers like 'Symbol' and 'Quantity'.",
+                    "headers like 'Symbol' and 'Quantity'."
+                    + (f" Columns found: {found}" if found else ""),
                     "",
                 )
             ]

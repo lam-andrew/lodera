@@ -192,3 +192,45 @@ def test_empty_upload_is_rejected(client: TestClient) -> None:
 def test_oversized_upload_is_rejected(client: TestClient) -> None:
     huge = b"Symbol,Quantity\n" + b"AAPL,1\n" * 400_000
     assert upload(client, "huge.csv", huge).status_code == 413
+
+
+# --- a real Schwab export ---------------------------------------------------------
+
+
+def test_parses_a_real_schwab_export() -> None:
+    """Regression for the format an actual Schwab "Positions" export uses.
+
+    Two things broke on the real file that the earlier hand-built fixture did not have:
+    the quantity column is written ``"Qty (Quantity)"`` rather than ``"Quantity"``, and the
+    footer row is labelled ``"Positions Total"``. Holdings here are substituted — the
+    structure is what matters and this repository is public.
+    """
+    result = parse_portfolio_csv(load("schwab_positions_real.csv"))
+
+    assert {h.ticker: h.quantity for h in result.holdings} == {
+        "AAPL": Decimal("3"),
+        "MSFT": Decimal("2.0078"),
+        "NVDA": Decimal("0.4555"),
+        "QQQ": Decimal("10.0876"),
+        "VOO": Decimal("20.3868"),
+    }
+    # "Cash & Cash Investments" and "Positions Total" are structural, not failures.
+    assert result.problems == []
+    assert result.skipped >= 2
+    assert result.quantity_column == "Qty (Quantity)"
+
+
+def test_short_long_header_forms_are_both_matched() -> None:
+    """Schwab labels columns "Short (Long)"; either half should identify the column."""
+    for header in ("Qty (Quantity)", "Quantity (Qty)", "Shares (Qty)"):
+        csv_text = f'Symbol,"{header}"\nAAPL,7\n'
+        result = parse_portfolio_csv(csv_text.encode())
+        assert [h.quantity for h in result.holdings] == [Decimal("7")], header
+
+
+def test_unrecognized_columns_are_reported_with_what_was_found() -> None:
+    """A user cannot fix their file unless told which columns we actually saw."""
+    result = parse_portfolio_csv(b"Account,Description,Value\nX,Something,10\n")
+    reason = result.problems[0].reason
+    assert "Could not find a ticker column" in reason
+    assert "Columns found: Account, Description, Value" in reason
