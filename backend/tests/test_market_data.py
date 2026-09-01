@@ -219,3 +219,61 @@ def test_a_narrow_cached_window_does_not_answer_a_wider_request(session_factory)
     inner = service.get_daily_prices("AAPL", end - timedelta(days=30), end)
     assert inner.source == "cache"
     assert provider.price_calls == 2
+
+
+def test_concurrent_requests_fetch_a_ticker_only_once(session_factory) -> None:  # type: ignore[no-untyped-def]
+    """Regression: five dashboard endpoints hitting a cold cache at once.
+
+    Before the per-ticker lock they all missed together, all called the provider, and then
+    collided inserting identical (ticker, date) rows — a unique-constraint violation that
+    reached the user as HTTP 500 and blank risk figures. Now the first caller fetches and
+    the rest find a warm cache.
+    """
+    import threading
+
+    provider = FakeProvider()
+    end = date(2026, 8, 30)
+    start = end - timedelta(days=365)
+
+    results: list[str] = []
+    errors: list[BaseException] = []
+    barrier = threading.Barrier(5)
+
+    def worker() -> None:
+        try:
+            service = MarketDataService(session_factory(), provider, ttl_hours=24)
+            barrier.wait()  # maximise the overlap
+            results.append(service.get_daily_prices("AAPL", start, end).source)
+        except BaseException as exc:  # noqa: BLE001 - surfaced via `errors` below
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker) for _ in range(5)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
+    assert len(results) == 5
+    # Exactly one provider call, and the other four served from cache.
+    assert provider.price_calls == 1
+    assert results.count("provider") == 1
+    assert results.count("cache") == 4
+
+
+def test_storing_bars_twice_does_not_raise(session_factory) -> None:  # type: ignore[no-untyped-def]
+    """Belt and braces: even if two processes race past the in-process lock, the write
+    must degrade rather than 500. The database constraint stays the real guarantee."""
+    session = session_factory()
+    provider = FakeProvider()
+    end = date(2026, 8, 30)
+    start = end - timedelta(days=30)
+
+    first = MarketDataService(session, provider, ttl_hours=24)
+    bars = provider.get_daily_prices("AAPL", start, end)
+
+    first._store("AAPL", start, end, bars)
+    # A second store of the same window, as a lost race would attempt.
+    first._store("AAPL", start, end, bars)
+
+    assert len(first.get_daily_prices("AAPL", start, end).bars) == len(bars)

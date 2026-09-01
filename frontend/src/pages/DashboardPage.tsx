@@ -153,7 +153,7 @@ export function DashboardPage({ data, onChanged }: DashboardPageProps) {
         </Card>
 
         {correlation !== null && summary.positions.length > 1 ? (
-          <CorrelationCard correlation={correlation} />
+          <CorrelationCard correlation={correlation} compact />
         ) : (
           <Card>
             <CardHeader>
