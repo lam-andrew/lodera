@@ -7,11 +7,14 @@ us inside the provider's free tier, and keeps the network off the analysis path.
 
 from __future__ import annotations
 
+import threading
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -20,6 +23,26 @@ from app.data.tiingo import TiingoProvider
 from app.models.prices import PriceBarRow, PriceCoverageRow
 
 Source = Literal["cache", "provider"]
+
+#: One lock per ticker, so concurrent requests for the same symbol fetch it once.
+#:
+#: The dashboard fires five endpoints at once and each needs prices for every holding. With
+#: a cold cache they all missed together, all called the provider, and then collided
+#: inserting identical (ticker, date) rows — a unique-constraint violation that surfaced as
+#: HTTP 500. Serializing per ticker fixes the collision and cuts provider requests by the
+#: number of concurrent callers, which matters against a 50-requests-per-hour free tier.
+#:
+#: Endpoints are sync, so FastAPI runs them in a threadpool and a threading lock is the right
+#: primitive. This is per-process: it does not coordinate across replicas, which is fine
+#: because the database constraint remains the real guarantee (see _store).
+_fetch_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
+_locks_guard = threading.Lock()
+
+
+def _lock_for(ticker: str) -> threading.Lock:
+    """The lock guarding provider fetches for one symbol."""
+    with _locks_guard:
+        return _fetch_locks[ticker]
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,7 +171,12 @@ class MarketDataService:
                 for bar in bars
             ]
         )
-        self._session.commit()
+        try:
+            self._session.commit()
+        except IntegrityError:
+            # Another process wrote these bars between our delete and our insert. The rows
+            # we wanted are now present, so discard our copy rather than failing the request.
+            self._session.rollback()
 
     def get_daily_prices(self, ticker: str, start: date, end: date) -> PriceSeries:
         """Return daily bars for ``ticker``, from cache when fresh, else from the provider.
@@ -160,14 +188,22 @@ class MarketDataService:
         if self._is_usable(symbol, start, end):
             cached = self._cached_rows(symbol, start, end)
             return PriceSeries(symbol, [self._to_bar(r) for r in cached], "cache")
-        cached = self._cached_rows(symbol, start, end)
 
-        try:
-            bars = self._provider.get_daily_prices(symbol, start, end)
-        except MarketDataError:
-            if cached:
+        with _lock_for(symbol):
+            # Re-check inside the lock: while we waited, a concurrent request for the same
+            # symbol may already have fetched and cached exactly this window.
+            self._session.expire_all()
+            if self._is_usable(symbol, start, end):
+                cached = self._cached_rows(symbol, start, end)
                 return PriceSeries(symbol, [self._to_bar(r) for r in cached], "cache")
-            raise
 
-        self._store(symbol, start, end, bars)
-        return PriceSeries(symbol, bars, "provider")
+            cached = self._cached_rows(symbol, start, end)
+            try:
+                bars = self._provider.get_daily_prices(symbol, start, end)
+            except MarketDataError:
+                if cached:
+                    return PriceSeries(symbol, [self._to_bar(r) for r in cached], "cache")
+                raise
+
+            self._store(symbol, start, end, bars)
+            return PriceSeries(symbol, bars, "provider")

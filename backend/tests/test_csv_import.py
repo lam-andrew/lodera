@@ -234,3 +234,33 @@ def test_unrecognized_columns_are_reported_with_what_was_found() -> None:
     reason = result.problems[0].reason
     assert "Could not find a ticker column" in reason
     assert "Columns found: Account, Description, Value" in reason
+
+
+def test_a_rate_limited_provider_does_not_reject_valid_tickers(client: TestClient) -> None:
+    """Regression: hitting the provider's hourly limit mid-import must not lose holdings.
+
+    Previously an unreachable provider fell back to a small bundled symbol list, so a real
+    Schwab export part-way through validation reported ten genuine tickers as
+    "Unrecognized" — wrong, and nothing the user could act on. We cannot disprove a symbol
+    when the provider is down, so it is accepted; a truly bad one still fails later when
+    pricing finds nothing.
+    """
+    from app.api.holdings import get_symbol_provider
+    from app.data.provider import RateLimitedError
+    from app.main import app
+
+    class RateLimited:
+        def get_daily_prices(self, ticker, start, end):  # type: ignore[no-untyped-def]
+            raise RateLimitedError("hourly allocation exceeded")
+
+        def symbol_exists(self, ticker: str) -> bool:
+            raise RateLimitedError("hourly allocation exceeded")
+
+    app.dependency_overrides[get_symbol_provider] = lambda: RateLimited()
+    try:
+        body = upload(client, "obscure.csv", b"Symbol,Quantity\nHOOD,20\nVXUS,11\nARKX,20\n").json()
+    finally:
+        app.dependency_overrides.pop(get_symbol_provider, None)
+
+    assert sorted(body["added"]) == ["ARKX", "HOOD", "VXUS"]
+    assert body["problems"] == []

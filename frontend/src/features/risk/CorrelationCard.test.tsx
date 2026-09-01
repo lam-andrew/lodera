@@ -92,3 +92,35 @@ describe("CorrelationCard (US-6)", () => {
     expect(screen.getByText(/at least two holdings/i)).toBeInTheDocument();
   });
 });
+
+describe("CorrelationCard compact mode (dashboard)", () => {
+  it("omits the grid and links to the full matrix", () => {
+    render(
+      <MemoryRouter>
+        <CorrelationCard correlation={base} compact />
+      </MemoryRouter>,
+    );
+
+    // An n x n grid does not belong in a summary column — the pairs do.
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /full matrix/i })).toHaveAttribute(
+      "href",
+      "/correlation",
+    );
+    expect(screen.getByText(/AAPL \/ MSFT · 0\.82/)).toBeInTheDocument();
+  });
+
+  it("still renders the grid in full mode", () => {
+    renderCard(base);
+    expect(screen.getByRole("table")).toBeInTheDocument();
+  });
+
+  it("shrinks cells as the matrix grows so a wide one still fits", () => {
+    const tickers = Array.from({ length: 18 }, (_, i) => `T${i}`);
+    const matrix = tickers.map((_, i) => tickers.map((_, j) => (i === j ? "1.00" : "0.30")));
+    renderCard({ ...base, tickers, matrix });
+
+    const cells = screen.getAllByText("0.30");
+    expect(Number(cells[0].style.width.replace("px", ""))).toBeLessThan(52);
+  });
+});
