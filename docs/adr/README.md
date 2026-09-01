@@ -34,3 +34,4 @@ capture an architecturally significant decision, its context, and its consequenc
 | [0011](0011-market-data-provider.md) | Market data via Tiingo, behind a provider interface | Accepted |
 | [0012](0012-risk-methodology.md) | Risk engine methodology and conventions | Accepted |
 | [0013](0013-hand-authored-charts.md) | Hand-authored SVG charts instead of a charting library | Accepted |
+| [0014](0014-authentication.md) | Authentication: in-app sessions with Argon2id | Accepted |

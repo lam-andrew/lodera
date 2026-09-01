@@ -8,6 +8,8 @@ import { Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SignInPage } from "@/features/auth/SignInPage";
+import { useAuth } from "@/hooks/useAuth";
 import { usePortfolio, type PortfolioData, type PortfolioState } from "@/hooks/usePortfolio";
 import { ConcentrationPage } from "@/pages/ConcentrationPage";
 import { CorrelationPage } from "@/pages/CorrelationPage";
@@ -55,6 +57,25 @@ function Loaded({
 }
 
 export default function App() {
+  const { state: auth, onSignedIn, signOut } = useAuth();
+
+  if (auth.kind === "checking") {
+    return (
+      <p role="status" className="py-24 text-center text-sm text-faint">
+        Loading…
+      </p>
+    );
+  }
+  if (auth.kind === "signedOut") {
+    return <SignInPage onSignedIn={onSignedIn} />;
+  }
+
+  return <SignedInApp email={auth.user.email} onSignOut={signOut} />;
+}
+
+/** The application proper. Split out so portfolio data is only ever fetched once a session
+ *  exists — otherwise every request would 401 on the sign-in screen. */
+function SignedInApp({ email, onSignOut }: { email: string; onSignOut: () => Promise<void> }) {
   const { state, refresh } = usePortfolio();
   const positions = state.kind === "ready" ? state.data.summary.positions.length : 0;
 
@@ -64,6 +85,8 @@ export default function App() {
         path="/"
         element={
           <AppShell
+            email={email}
+            onSignOut={onSignOut}
             title="Risk overview"
             subtitle={`Personal portfolio · ${positions} ${positions === 1 ? "position" : "positions"}`}
           >
@@ -76,7 +99,12 @@ export default function App() {
       <Route
         path="/holdings"
         element={
-          <AppShell title="Holdings" subtitle="Add, edit, import and remove positions">
+          <AppShell
+            email={email}
+            onSignOut={onSignOut}
+            title="Holdings"
+            subtitle="Add, edit, import and remove positions"
+          >
             <Loaded state={state}>
               {(data) => <HoldingsPage data={data} onChanged={refresh} />}
             </Loaded>
@@ -86,7 +114,12 @@ export default function App() {
       <Route
         path="/correlation"
         element={
-          <AppShell title="Correlation" subtitle="How your holdings move relative to each other">
+          <AppShell
+            email={email}
+            onSignOut={onSignOut}
+            title="Correlation"
+            subtitle="How your holdings move relative to each other"
+          >
             <Loaded state={state}>{(data) => <CorrelationPage data={data} />}</Loaded>
           </AppShell>
         }
@@ -94,7 +127,12 @@ export default function App() {
       <Route
         path="/concentration"
         element={
-          <AppShell title="Concentration" subtitle="Where the portfolio is overexposed">
+          <AppShell
+            email={email}
+            onSignOut={onSignOut}
+            title="Concentration"
+            subtitle="Where the portfolio is overexposed"
+          >
             <Loaded state={state}>{(data) => <ConcentrationPage data={data} />}</Loaded>
           </AppShell>
         }
@@ -102,7 +140,12 @@ export default function App() {
       <Route
         path="/drawdown"
         element={
-          <AppShell title="Drawdown" subtitle="The portfolio's worst historical declines">
+          <AppShell
+            email={email}
+            onSignOut={onSignOut}
+            title="Drawdown"
+            subtitle="The portfolio's worst historical declines"
+          >
             <Loaded state={state}>{(data) => <DrawdownPage data={data} />}</Loaded>
           </AppShell>
         }
@@ -111,6 +154,8 @@ export default function App() {
         path="/methodology"
         element={
           <AppShell
+            email={email}
+            onSignOut={onSignOut}
             title="How this is calculated"
             subtitle="The method behind every risk figure, and what it does not model"
           >
@@ -121,7 +166,7 @@ export default function App() {
       <Route
         path="*"
         element={
-          <AppShell title="Page not found">
+          <AppShell email={email} onSignOut={onSignOut} title="Page not found">
             <Card>
               <CardHeader>
                 <CardTitle>That page doesn&apos;t exist</CardTitle>

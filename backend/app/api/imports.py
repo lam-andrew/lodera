@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from sqlalchemy import select
 
+from app.api.auth import CurrentUser
 from app.api.holdings import (
     ProviderDep,
     SessionDep,
@@ -34,6 +35,7 @@ MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 def import_holdings(
     session: SessionDep,
     provider: ProviderDep,
+    user: CurrentUser,
     file: Annotated[UploadFile, File(description="CSV or brokerage positions export")],
 ) -> ImportResultRead:
     """Import holdings from a CSV / brokerage export.
@@ -68,7 +70,7 @@ def import_holdings(
             quantity_column=parsed.quantity_column,
         )
 
-    portfolio = _get_or_create_default_portfolio(session)
+    portfolio = _get_or_create_default_portfolio(session, user.id)
     existing = {
         holding.ticker: holding
         for holding in session.scalars(select(Holding).where(Holding.portfolio_id == portfolio.id))

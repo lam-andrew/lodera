@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.auth import CurrentUser
 from app.api.schemas import HoldingCreate, HoldingRead, HoldingUpdate
 from app.core.config import settings
 from app.core.database import get_session
@@ -43,14 +44,19 @@ def get_symbol_provider() -> MarketDataProvider | None:
 ProviderDep = Annotated[MarketDataProvider | None, Depends(get_symbol_provider)]
 
 
-def _get_default_portfolio(session: Session) -> Portfolio | None:
-    return session.scalar(select(Portfolio).where(Portfolio.name == DEFAULT_PORTFOLIO_NAME))
+def _get_default_portfolio(session: Session, user_id: int) -> Portfolio | None:
+    """The signed-in user's portfolio.
+
+    Every read and write funnels through this (or its create-if-missing sibling), which is
+    what keeps one account's holdings invisible to another.
+    """
+    return session.scalar(select(Portfolio).where(Portfolio.user_id == user_id))
 
 
-def _get_or_create_default_portfolio(session: Session) -> Portfolio:
-    portfolio = _get_default_portfolio(session)
+def _get_or_create_default_portfolio(session: Session, user_id: int) -> Portfolio:
+    portfolio = _get_default_portfolio(session, user_id)
     if portfolio is None:
-        portfolio = Portfolio(name=DEFAULT_PORTFOLIO_NAME)
+        portfolio = Portfolio(user_id=user_id, name=DEFAULT_PORTFOLIO_NAME)
         session.add(portfolio)
         session.commit()
         session.refresh(portfolio)
@@ -58,9 +64,9 @@ def _get_or_create_default_portfolio(session: Session) -> Portfolio:
 
 
 @router.get("", response_model=list[HoldingRead])
-def list_holdings(session: SessionDep) -> list[Holding]:
+def list_holdings(session: SessionDep, user: CurrentUser) -> list[Holding]:
     """List the holdings in the portfolio (empty until the first one is added)."""
-    portfolio = _get_default_portfolio(session)
+    portfolio = _get_default_portfolio(session, user.id)
     if portfolio is None:
         return []
     return list(
@@ -71,7 +77,9 @@ def list_holdings(session: SessionDep) -> list[Holding]:
 
 
 @router.post("", response_model=HoldingRead, status_code=status.HTTP_201_CREATED)
-def add_holding(payload: HoldingCreate, session: SessionDep, provider: ProviderDep) -> Holding:
+def add_holding(
+    payload: HoldingCreate, session: SessionDep, provider: ProviderDep, user: CurrentUser
+) -> Holding:
     """Add a holding by ticker and share quantity.
 
     Rejects an unrecognized ticker (422) and a ticker already in the portfolio (409); the
@@ -84,7 +92,7 @@ def add_holding(payload: HoldingCreate, session: SessionDep, provider: ProviderD
             detail=f"Unrecognized ticker '{payload.ticker}'. Check the symbol and try again.",
         )
 
-    portfolio = _get_or_create_default_portfolio(session)
+    portfolio = _get_or_create_default_portfolio(session, user.id)
 
     already_held = session.scalar(
         select(Holding).where(
@@ -104,13 +112,13 @@ def add_holding(payload: HoldingCreate, session: SessionDep, provider: ProviderD
     return holding
 
 
-def _get_owned_holding(session: Session, holding_id: int) -> Holding:
+def _get_owned_holding(session: Session, holding_id: int, user_id: int) -> Holding:
     """Fetch a holding in the default portfolio, or raise 404.
 
-    Scoping the lookup to the portfolio (not just the id) is what will keep one user from
-    touching another's holdings once auth lands (US-13).
+    Scoping the lookup to the user's portfolio (not just the id) is what stops one account
+    from reading or editing another's holdings — a bare id lookup would be an IDOR.
     """
-    portfolio = _get_default_portfolio(session)
+    portfolio = _get_default_portfolio(session, user_id)
     holding = (
         None
         if portfolio is None
@@ -127,10 +135,12 @@ def _get_owned_holding(session: Session, holding_id: int) -> Holding:
 
 
 @router.patch("/{holding_id}", response_model=HoldingRead)
-def update_holding(holding_id: int, payload: HoldingUpdate, session: SessionDep) -> Holding:
+def update_holding(
+    holding_id: int, payload: HoldingUpdate, session: SessionDep, user: CurrentUser
+) -> Holding:
     """Edit a holding's share quantity (US-3). The new quantity must be positive; to remove
     a position entirely, delete it instead."""
-    holding = _get_owned_holding(session, holding_id)
+    holding = _get_owned_holding(session, holding_id, user.id)
     holding.quantity = payload.quantity
     session.commit()
     session.refresh(holding)
@@ -138,8 +148,8 @@ def update_holding(holding_id: int, payload: HoldingUpdate, session: SessionDep)
 
 
 @router.delete("/{holding_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_holding(holding_id: int, session: SessionDep) -> None:
+def delete_holding(holding_id: int, session: SessionDep, user: CurrentUser) -> None:
     """Remove a holding from the portfolio (US-3), excluding it from further analysis."""
-    holding = _get_owned_holding(session, holding_id)
+    holding = _get_owned_holding(session, holding_id, user.id)
     session.delete(holding)
     session.commit()

@@ -33,17 +33,19 @@ interface AppShellProps {
   subtitle?: string;
   actions?: ReactNode;
   children: ReactNode;
+  email: string;
+  onSignOut: () => Promise<void>;
 }
 
 /** Sidebar + main column. The sidebar is fixed on desktop and collapses to a toggle on
  *  narrow screens, so the dashboard grid never has to compete with it for width. */
-export function AppShell({ title, subtitle, actions, children }: AppShellProps) {
+export function AppShell({ title, subtitle, actions, children, email, onSignOut }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[236px_1fr]">
       <aside className="hidden border-r border-border bg-surface lg:sticky lg:top-0 lg:block lg:h-screen">
-        <Sidebar />
+        <Sidebar email={email} onSignOut={onSignOut} />
       </aside>
 
       {navOpen && (
@@ -54,7 +56,7 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
             onClick={() => setNavOpen(false)}
           />
           <div className="absolute left-0 top-0 h-full w-64 border-r border-border bg-surface">
-            <Sidebar onNavigate={() => setNavOpen(false)} />
+            <Sidebar email={email} onSignOut={onSignOut} onNavigate={() => setNavOpen(false)} />
           </div>
         </div>
       )}

@@ -121,6 +121,8 @@ const drawdown = {
 };
 
 function mockAll(overrides: { positions?: typeof positions } = {}) {
+  // Every route is behind auth (US-13), so a signed-in user is the baseline for these tests.
+  vi.spyOn(client, "getCurrentUser").mockResolvedValue({ id: 1, email: "owner@example.com" });
   vi.spyOn(client, "getHealth").mockResolvedValue(health);
   vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
     positions: overrides.positions ?? positions,
@@ -235,6 +237,8 @@ describe("Navigation (US-10)", () => {
 
   it("links concentration and drawdown now that they are built", async () => {
     renderAt("/");
+    // The sidebar only exists once the auth check has resolved.
+    await screen.findByText("Portfolio value");
     expect(screen.getByRole("link", { name: /concentration/i })).toHaveAttribute(
       "href",
       "/concentration",
@@ -261,6 +265,7 @@ describe("Load states", () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it("surfaces an error when the portfolio cannot be loaded", async () => {
+    vi.spyOn(client, "getCurrentUser").mockResolvedValue({ id: 1, email: "owner@example.com" });
     vi.spyOn(client, "getHealth").mockResolvedValue(health);
     vi.spyOn(client, "getPortfolioSummary").mockRejectedValue(new Error("down"));
     vi.spyOn(client, "getPortfolioRisk").mockResolvedValue(risk);
@@ -274,6 +279,7 @@ describe("Load states", () => {
   });
 
   it("still renders holdings when only the analytics calls fail", async () => {
+    vi.spyOn(client, "getCurrentUser").mockResolvedValue({ id: 1, email: "owner@example.com" });
     vi.spyOn(client, "getHealth").mockResolvedValue(health);
     vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
       positions,
@@ -289,5 +295,96 @@ describe("Load states", () => {
     renderAt("/");
     expect((await screen.findAllByText("$5,366.30")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("AAPL").length).toBeGreaterThan(0);
+  });
+});
+
+describe("Authentication gate (US-13)", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("shows the sign-in screen when there is no session", async () => {
+    vi.spyOn(client, "getCurrentUser").mockResolvedValue(null);
+    renderAt("/");
+
+    expect(await screen.findByRole("heading", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    // The portfolio must not be visible at all.
+    expect(screen.queryByText("Portfolio value")).not.toBeInTheDocument();
+  });
+
+  it("does not request portfolio data before a session exists", async () => {
+    vi.spyOn(client, "getCurrentUser").mockResolvedValue(null);
+    const summary = vi.spyOn(client, "getPortfolioSummary");
+    renderAt("/");
+
+    await screen.findByRole("heading", { name: /sign in/i });
+    expect(summary).not.toHaveBeenCalled();
+  });
+
+  it("shows the dashboard once signed in", async () => {
+    mockAll();
+    renderAt("/");
+    expect(await screen.findByText("Portfolio value")).toBeInTheDocument();
+  });
+
+  it("signs in and reveals the portfolio", async () => {
+    vi.spyOn(client, "getCurrentUser").mockResolvedValue(null);
+    vi.spyOn(client, "login").mockResolvedValue({ id: 1, email: "owner@example.com" });
+    vi.spyOn(client, "getHealth").mockResolvedValue(health);
+    vi.spyOn(client, "getPortfolioSummary").mockResolvedValue({
+      positions,
+      total_value: "5366.30",
+      priced: true,
+    });
+    vi.spyOn(client, "getPortfolioRisk").mockResolvedValue(risk);
+    vi.spyOn(client, "getPortfolioCorrelation").mockResolvedValue(correlation);
+    vi.spyOn(client, "getPortfolioHistory").mockResolvedValue(history);
+    vi.spyOn(client, "getPortfolioConcentration").mockResolvedValue(concentration);
+    vi.spyOn(client, "getPortfolioDrawdown").mockResolvedValue(drawdown);
+
+    renderAt("/");
+    await screen.findByRole("heading", { name: /sign in/i });
+
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: "owner@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: "correct-horse-battery" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    expect(await screen.findByText("Portfolio value")).toBeInTheDocument();
+  });
+
+  it("surfaces a rejected sign-in", async () => {
+    vi.spyOn(client, "getCurrentUser").mockResolvedValue(null);
+    vi.spyOn(client, "login").mockRejectedValue(new Error("nope"));
+
+    renderAt("/");
+    await screen.findByRole("heading", { name: /sign in/i });
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "whatever-long" } });
+    fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("signs out back to the sign-in screen", async () => {
+    mockAll();
+    vi.spyOn(client, "logout").mockResolvedValue(undefined);
+
+    renderAt("/");
+    await screen.findByText("Portfolio value");
+
+    fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
+
+    expect(await screen.findByRole("heading", { name: /sign in/i })).toBeInTheDocument();
+  });
+
+  it("shows the signed-in account in the sidebar", async () => {
+    mockAll();
+    renderAt("/");
+    await screen.findByText("Portfolio value");
+    expect(screen.getByTitle("owner@example.com")).toBeInTheDocument();
   });
 });

@@ -10,7 +10,9 @@ import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-export const api = axios.create({ baseURL });
+// withCredentials is required for the session cookie to travel: the frontend and API are
+// different origins in development, and cookies are not sent cross-origin without it.
+export const api = axios.create({ baseURL, withCredentials: true });
 
 /**
  * Turn an API failure into a single human-readable message. The backend returns either a
@@ -257,4 +259,35 @@ export interface PortfolioDrawdown {
 export async function getPortfolioDrawdown(): Promise<PortfolioDrawdown> {
   const { data } = await api.get<PortfolioDrawdown>("/portfolio/drawdown");
   return data;
+}
+
+/** The signed-in account (US-13). Never carries a password or hash. */
+export interface User {
+  id: number;
+  email: string;
+}
+
+/** Whoever is signed in, or null when there is no valid session. */
+export async function getCurrentUser(): Promise<User | null> {
+  try {
+    const { data } = await api.get<User>("/auth/me");
+    return data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) return null;
+    throw error;
+  }
+}
+
+export async function register(email: string, password: string): Promise<User> {
+  const { data } = await api.post<User>("/auth/register", { email, password });
+  return data;
+}
+
+export async function login(email: string, password: string): Promise<User> {
+  const { data } = await api.post<User>("/auth/login", { email, password });
+  return data;
+}
+
+export async function logout(): Promise<void> {
+  await api.post("/auth/logout");
 }

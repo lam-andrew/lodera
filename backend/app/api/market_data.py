@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.auth import CurrentUser
 from app.api.schemas import PriceBarRead, PriceSeriesRead
 from app.core.config import settings
 from app.core.database import get_session
@@ -47,6 +48,7 @@ ServiceDep = Annotated[MarketDataService, Depends(get_market_data_service)]
 def get_prices(
     ticker: str,
     service: ServiceDep,
+    user: CurrentUser,
     days: Annotated[int, Query(ge=1, le=3650)] = DEFAULT_LOOKBACK_DAYS,
 ) -> PriceSeriesRead:
     """Return daily prices for ``ticker`` over the trailing ``days`` window.

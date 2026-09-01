@@ -4,5 +4,13 @@ Alembic autogeneration and ``create_all`` (tests) can see them.
 
 from app.models.portfolio import Holding, Portfolio
 from app.models.prices import PriceBarRow, PriceCoverageRow
+from app.models.user import User, UserSession
 
-__all__ = ["Holding", "Portfolio", "PriceBarRow", "PriceCoverageRow"]
+__all__ = [
+    "Holding",
+    "Portfolio",
+    "PriceBarRow",
+    "PriceCoverageRow",
+    "User",
+    "UserSession",
+]
