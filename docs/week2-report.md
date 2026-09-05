@@ -405,7 +405,7 @@ change can merge.
 
 ### 6.3 Architecture views
 
-The architecture is documented using the **C4 model**, maintained as Mermaid diagrams in
+The architecture is documented using the **C4 model**, maintained as plain-text diagrams in
 [`docs/architecture.md`](architecture.md) so they are version-controlled as text and render
 natively on GitHub. Three views are maintained: System Context, Container, and a Component view
 of the Risk & Exposure engine.
@@ -414,24 +414,40 @@ of the Risk & Exposure engine.
 
 Orbit as a black box among its users and external systems.
 
-```mermaid
-C4Context
-    title System Context — Orbit
-
-    Person(investor, "Individual Investor", "Self-directed investor holding stocks and ETFs who wants evidence-based risk insight.")
-
-    System(orbit, "Orbit", "Portfolio risk intelligence. Ingests a portfolio, computes risk & exposure metrics, and explains risk with citations grounded in SEC filings.")
-
-    System_Ext(marketdata, "Market-Data API", "Free external source of historical prices (cached locally).")
-    System_Ext(edgar, "SEC EDGAR", "Public source of company filings (10-K, 10-Q, 8-K).")
-    System_Ext(llm, "Hosted LLM API", "Embeddings + text generation for grounded RAG answers. Accessed behind an interface.")
-
-    Rel(investor, orbit, "Enters a portfolio; views risk dashboard; asks grounded questions", "HTTPS")
-    Rel(orbit, marketdata, "Retrieves historical prices", "HTTPS (cached)")
-    Rel(orbit, edgar, "Retrieves filings", "HTTPS")
-    Rel(orbit, llm, "Requests embeddings & grounded answers", "HTTPS")
-
-    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
+```
+                      ┌──────────────────────────────┐
+                      │     Individual Investor      │
+                      │          [Person]            │
+                      │                              │
+                      │   Self-directed investor     │
+                      │   holding stocks and ETFs    │
+                      └───────────────┬──────────────┘
+                                      │
+                    Enters portfolio, views dashboard,
+                          asks questions   [HTTPS]
+                                      ▼
+    ┌───────────────────────────────────────────────────────────────┐
+    │                            ORBIT                              │
+    │                      [Software System]                        │
+    │                                                               │
+    │   Portfolio risk intelligence. Computes risk and exposure     │
+    │   metrics and explains them with citations grounded in        │
+    │   SEC filings.                                                │
+    │                                                               │
+    │   Does NOT predict prices, execute trades, or give advice.    │
+    └──────┬──────────────────────┬─────────────────────┬───────────┘
+           │                      │                     │
+   Retrieves prices        Retrieves filings     Requests embeddings
+   [HTTPS, cached]              [HTTPS]          and answers [HTTPS]
+           ▼                      ▼                     ▼
+ ┌──────────────────┐  ┌───────────────────┐  ┌──────────────────────┐
+ │ Market-Data API  │  │     SEC EDGAR     │  │    Hosted LLM API    │
+ │ [External System]│  │ [External System] │  │  [External System]   │
+ │                  │  │                   │  │                      │
+ │ Historical daily │  │ Public filings:   │  │ Embeddings and       │
+ │ prices, cached   │  │ 10-K, 10-Q, 8-K   │  │ grounded generation  │
+ │ locally (FR-6)   │  │                   │  │                      │
+ └──────────────────┘  └───────────────────┘  └──────────────────────┘
 ```
 
 All three external dependencies are free or public, and all are reached only from the backend.
@@ -442,43 +458,63 @@ No API credential is ever present in the browser.
 The runnable units inside the deployment boundary. Everything inside the boundary is a Docker
 Compose service; external systems and CI/CD sit outside it.
 
-```mermaid
-C4Container
-    title Container Diagram — Orbit
+```
+                      ┌──────────────────────────────┐
+                      │     Individual Investor      │
+                      │          [Person]            │
+                      └───────────────┬──────────────┘
+                                      │ Uses [HTTPS]
+ ┌════════════════════════════════════╪════════════════════════════════┐
+ ‖  ORBIT — Docker Compose deployment boundary                         ‖
+ ‖                                    ▼                                ‖
+ ‖  ┌───────────────────────────────────────────────────────────────┐  ‖
+ ‖  │ Frontend                    [Container: React + TypeScript]   │  ‖
+ ‖  │ Presentation only: portfolio entry, risk dashboard,           │  ‖
+ ‖  │ visualizations, Q&A.  No business logic.                      │  ‖
+ ‖  └──────────────────────────────┬────────────────────────────────┘  ‖
+ ‖                                 │ REST / JSON [HTTPS]               ‖
+ ‖                                 ▼                                   ‖
+ ‖  ┌───────────────────────────────────────────────────────────────┐  ‖
+ ‖  │ Backend / API layer         [Container: Python 3.12 + FastAPI]│  ‖
+ ‖  │ Single entry point and orchestrator: authentication, routing, │  ‖
+ ‖  │ input validation, engine invocation.                          │  ‖
+ ‖  │ Performs ALL external I/O.  THE API CONTRACT.                 │  ‖
+ ‖  └───┬──────────────────┬────────────────────────┬───────────────┘  ‖
+ ‖      │ invokes behind   │ invokes behind         │ reads / writes   ‖
+ ‖      │ the API contract │ the API contract       │ [SQL]            ‖
+ ‖      ▼                  ▼                        │                  ‖
+ ‖  ┌─────────────────┐  ┌──────────────────────┐   │                  ‖
+ ‖  │ Risk & Exposure │  │ RAG engine           │   │                  ‖
+ ‖  │ engine   [CORE] │  │ [SECONDARY]          │   │                  ‖
+ ‖  │                 │  │                      │   │                  ‖
+ ‖  │ Volatility,     │  │ Retrieves, embeds    │   │                  ‖
+ ‖  │ correlation,    │  │ and indexes SEC      │   │                  ‖
+ ‖  │ concentration,  │  │ filings. Produces    │   │                  ‖
+ ‖  │ drawdown,       │  │ grounded, cited      │   │                  ‖
+ ‖  │ stress testing. │  │ explanations.        │   │                  ‖
+ ‖  │                 │  │                      │   │                  ‖
+ ‖  │ PURE — no I/O   │  └──────────┬───────────┘   │                  ‖
+ ‖  └─────────────────┘             │ embeddings    │                  ‖
+ ‖                                  │ [SQL/pgvector]│                  ‖
+ ‖                                  ▼               ▼                  ‖
+ ‖          ┌───────────────────────────────────────────────┐          ‖
+ ‖          │ PostgreSQL 16 + pgvector      [Container]     │          ‖
+ ‖          │ Users, portfolios, holdings, cached price     │          ‖
+ ‖          │ bars, coverage windows, filing embeddings     │          ‖
+ ‖          └───────────────────────────────────────────────┘          ‖
+ └══════════════════════════════════════════════════════════════════════┘
+        │                        │                        │
+  Backend fetches          RAG fetches              RAG requests
+  prices, then caches      filings                  embeddings/answers
+  [HTTPS]                  [HTTPS]                  [HTTPS]
+        ▼                        ▼                        ▼
+ ┌─────────────────┐  ┌────────────────────┐  ┌─────────────────────┐
+ │ Market-Data API │  │     SEC EDGAR      │  │   Hosted LLM API    │
+ │   [External]    │  │     [External]     │  │     [External]      │
+ └─────────────────┘  └────────────────────┘  └─────────────────────┘
 
-    Person(investor, "Individual Investor", "Holds stocks/ETFs; wants risk insight.")
-
-    System_Boundary(orbit, "Orbit (Docker Compose)") {
-        Container(frontend, "Frontend", "React + TypeScript", "Presentation only: portfolio entry, risk dashboard + visualizations, natural-language Q&A. Talks to the backend over REST/JSON.")
-
-        Container(backend, "Backend / API layer", "Python 3.12 + FastAPI", "Single entry point & orchestrator: auth, routing, input validation, engine invocation. Exposes engines only through the API contract.")
-
-        Container(risk, "Risk & Exposure engine (CORE)", "Python (pandas, NumPy, scikit-learn)", "Volatility, correlation, concentration/exposure, drawdown, stress testing. No knowledge of the frontend or RAG engine.")
-
-        Container(rag, "RAG engine (SECONDARY)", "Python", "Retrieves, embeds, and indexes SEC filings; produces grounded, cited explanations. Isolated from the core.")
-
-        ContainerDb(db, "PostgreSQL 16 + pgvector", "PostgreSQL", "Relational data (users, portfolios, holdings, cached prices) and filing embeddings in one service.")
-    }
-
-    System_Ext(marketdata, "Market-Data API", "Historical prices (cached).")
-    System_Ext(edgar, "SEC EDGAR", "Company filings.")
-    System_Ext(llm, "Hosted LLM API", "Embeddings + generation.")
-
-    Rel(investor, frontend, "Uses", "HTTPS")
-    Rel(frontend, backend, "REST / JSON", "HTTPS")
-
-    Rel(backend, risk, "Invokes (in-process, behind the API contract)")
-    Rel(backend, rag, "Invokes (in-process, behind the API contract)")
-    Rel(backend, db, "Reads/writes relational data & cache", "SQL")
-
-    Rel(risk, db, "Reads cached prices", "SQL")
-    Rel(rag, db, "Reads/writes filing embeddings", "SQL / pgvector")
-
-    Rel(backend, marketdata, "Fetches prices (then caches)", "HTTPS")
-    Rel(rag, edgar, "Fetches filings", "HTTPS")
-    Rel(rag, llm, "Requests embeddings & answers", "HTTPS")
-
-    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
+ CI/CD sits outside the boundary: GitHub Actions builds and tests these
+ same container images on every push.
 ```
 
 #### View 3 — Component: the Risk & Exposure engine
@@ -489,40 +525,68 @@ inputs, importing no database, HTTP, or provider code. All input and output happ
 layer above the boundary and is handed down. This is what makes the algorithmic core testable
 against hand-computed expected values, and it is the concrete realization of AR-2.
 
-```mermaid
-C4Component
-    title Component Diagram — Risk & Exposure engine
+```
+                 ┌────────────────────────────────────┐
+                 │ Frontend        [Container: React] │
+                 │ Requests analysis over REST        │
+                 └─────────────────┬──────────────────┘
+                                   │ REST / JSON [HTTPS]
+ ┌─────────────────────────────────┼────────────────────────────────┐
+ │ BACKEND / API LAYER — performs ALL input and output              │
+ │                                 ▼                                │
+ │ ┌──────────────────────────────────────────────────────────────┐ │
+ │ │ Risk and exposure routes             [Component: FastAPI]    │ │
+ │ │ The public API contract: /portfolio/risk, /correlation,      │ │
+ │ │ /concentration, /drawdown                                    │ │
+ │ └──┬───────────────────────────────────────────────────────────┘ │
+ │    │ requests aligned series and weights                         │
+ │    ▼                                                             │
+ │ ┌──────────────────────────────────────────────────────────────┐ │
+ │ │ Portfolio series assembler           [Component: Python]     │ │
+ │ │ Loads holdings, aligns price series to common trading        │ │
+ │ │ dates, derives portfolio weights                             │ │
+ │ └──┬───────────────────────────────────────────────────────────┘ │
+ │    │ requests daily bars                                         │
+ │    ▼                                                             │
+ │ ┌──────────────────────────────────────────────────────────────┐ │
+ │ │ Market-data service                  [Component: Python]     │ │
+ │ │ Cache-aware price access. Serves from PostgreSQL when fresh, │ │
+ │ │ else fetches and stores. Single-flight per symbol.           │ │
+ │ └──┬──────────────────────────────┬────────────────────────────┘ │
+ └────┼──────────────────────────────┼──────────────────────────────┘
+      │ reads / writes               │ fetches ONLY on a
+      │ cached bars [SQL]            │ cache miss [HTTPS]
+      ▼                              ▼
+ ┌──────────────────────────┐  ┌──────────────────────────────┐
+ │ PostgreSQL   [Container] │  │ Market-Data API   [External] │
+ │ Holdings, cached price   │  │ Historical daily prices;     │
+ │ bars, coverage windows   │  │ hard hourly request quota    │
+ └──────────────────────────┘  └──────────────────────────────┘
 
-    Container(frontend, "Frontend", "React + TypeScript", "Requests analysis over REST.")
+   The routes then call the engine below with PLAIN NUMBERS:
+   returns and weights, aligned return series, portfolio value series.
 
-    Container_Boundary(api, "Backend / API layer (performs all I/O)") {
-        Component(routes, "Risk & exposure routes", "FastAPI", "Public API contract: /portfolio/risk, /correlation, /concentration, /drawdown.")
-        Component(series, "Portfolio series assembler", "Python", "Loads holdings, fetches cached prices, aligns series to common trading dates, derives weights.")
-        Component(mds, "Market-data service", "Python", "Cache-aware price access: serves from PostgreSQL when fresh, else fetches and stores.")
-    }
-
-    Container_Boundary(engine, "Risk & Exposure engine (pure — no I/O)") {
-        Component(vol, "Volatility", "Python + NumPy", "Daily returns, annualized standard deviation, portfolio volatility via the covariance matrix.")
-        Component(corr, "Correlation", "Python + NumPy", "Pearson correlation matrix; most/least correlated pairs.")
-        Component(conc, "Concentration", "Python", "Herfindahl index, effective holdings, overweight positions, overlapping exposure.")
-        Component(dd, "Drawdown", "Python", "Running-peak drawdown series, maximum and current drawdown, decline episodes.")
-    }
-
-    ContainerDb(db, "PostgreSQL 16 + pgvector", "PostgreSQL", "Holdings and cached price bars.")
-    System_Ext(marketdata, "Market-Data API", "Historical prices.")
-
-    Rel(frontend, routes, "REST / JSON", "HTTPS")
-    Rel(routes, series, "Requests aligned price series + weights")
-    Rel(series, mds, "Requests daily bars")
-    Rel(mds, db, "Reads/writes cached bars", "SQL")
-    Rel(mds, marketdata, "Fetches on cache miss", "HTTPS")
-
-    Rel(routes, vol, "Calls with returns + weights")
-    Rel(routes, corr, "Calls with aligned return series")
-    Rel(routes, conc, "Calls with weights + correlations")
-    Rel(routes, dd, "Calls with portfolio value series")
-
-    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ RISK AND EXPOSURE ENGINE — PURE FUNCTIONS, NO INPUT OR OUTPUT                │
+│                                                                              │
+│ ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐   │
+│ │   Volatility  │  │  Correlation  │  │ Concentration │  │    Drawdown   │   │
+│ │    [NumPy]    │  │    [NumPy]    │  │    [Python]   │  │    [Python]   │   │
+│ ├───────────────┤  ├───────────────┤  ├───────────────┤  ├───────────────┤   │
+│ │Daily returns, │  │Pearson        │  │Herfindahl     │  │Running-peak   │   │
+│ │annualized     │  │correlation    │  │index,         │  │drawdown,      │   │
+│ │standard       │  │matrix, most   │  │effective      │  │maximum and    │   │
+│ │deviation,     │  │and least      │  │holdings,      │  │current,       │   │
+│ │covariance     │  │correlated     │  │overweight,    │  │decline        │   │
+│ │portfolio      │  │pairs          │  │overlap        │  │episodes       │   │
+│ │volatility     │  │               │  │groups         │  │               │   │
+│ └───────────────┘  └───────────────┘  └───────────────┘  └───────────────┘   │
+│                                                                              │
+│ No module here imports a database, an HTTP client, or a                      │
+│ market-data provider. The routes hand these components plain                 │
+│ numbers and get plain numbers back, which is what makes the                  │
+│ algorithmic core testable against hand-computed values.                      │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 6.4 Component descriptions and allocation of responsibilities
@@ -696,7 +760,7 @@ documents, updated in the same pull request as the code they describe:
 | End-User Documentation | [`docs/user-guide.md`](user-guide.md) | Initial version, grows as features land |
 
 Supporting these, `docs/adr/` holds the Architecture Decision Records, and `README.md` carries
-the project overview, stack, and roadmap. Because the architecture diagrams are Mermaid text
+the project overview, stack, and roadmap. Because the architecture diagrams are plain text
 rather than images, they are reviewed and versioned like source code, which is what keeps them
 from drifting out of date.
 
